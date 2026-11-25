@@ -31,12 +31,19 @@ function timeline(){
 }
 
 /* ---------- top ---------- */
+const NAVI={today:'<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',week:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',food:'<path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5a2 2 0 0 0 2 2M9 3v5M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/>',track:'<path d="M5 21V4m0 0h11l-2 4 2 4H5"/>',stats:'<path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/>'};
+const navIc=k=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAVI[k]+'</svg>';
 function renderBoard(){
-  const p=plan(S.date),nr=nextRace(S.date);
-  const isT=S.date===todayS();
-  $('#board').innerHTML='<div class="topr"><div class="dnav"><button id="prev" aria-label="Previous day">‹</button><div class="dt">'+(isT?'Today':esc(nice(S.date)))+'<small>'+esc(p.c.label)+'</small></div><button id="next" aria-label="Next day">›</button></div>'+'<span style="display:flex;gap:6px;align-items:center">'+(nr?'<span class="chip"><b>'+(nr[2]===0?'Race day':nr[2]+' days')+'</b> to '+esc(nr[1])+'</span>':'')+'</span></div>'+
-   '<nav class="tabs">'+[['today','Today'],['week','Plan'],['food','Food'],['track','Track'],['stats','Stats']].map(v=>'<a href="#'+v[0]+'" class="'+(S.view===v[0]?'on':'')+'">'+v[1]+'</a>').join('')+'</nav>';
+  const p=plan(S.date),nr=nextRace(S.date),isT=S.date===todayS(),name=(S.prof&&S.prof.name)||'Kayden',h=new Date().getHours();
+  const hi=h<12?'Morning':h<18?'Afternoon':'Evening';
+  const mon=toN(S.date)-(dow(S.date)-1),races=new Set((typeof RACES!=='undefined'?RACES:[]).map(r=>r[0]));
+  const strip='<div class="ds"><button class="wk" id="wprev" aria-label="Previous week">‹</button>'+[0,1,2,3,4,5,6].map(i=>{const s=toS(mon+i),pp=plan(s),key=(pp.am&&pp.am.tier==='KEY')||(pp.pm&&pp.pm.tier==='KEY');return '<button class="d'+(s===S.date?' on':'')+(s===todayS()?' td':'')+'" data-dstrip="'+s+'" aria-label="'+esc(nice(s))+'">'+DN[dow(s)]+'<b>'+(+s.slice(8,10))+'</b><i class="'+(races.has(s)?'r':key?'k':'')+'"></i></button>'}).join('')+'<button class="wk" id="wnext" aria-label="Next week">›</button></div>';
+  const showStrip=S.view!=='track'&&S.view!=='stats';
+  $('#board').innerHTML='<div class="uh"><div class="who"><div class="av" aria-hidden="true">'+esc(name[0].toUpperCase())+'</div><div><b>'+hi+', '+esc(name)+'</b><small>'+esc(p.c.label)+'</small></div></div><div class="act">'+(nr?'<span class="rp" title="'+esc(nr[1])+'"><b>'+(nr[2]===0?'Race day':nr[2]+' days')+'</b><span class="rn"> to '+esc(nr[1])+'</span></span>':'')+'<a class="ib" href="#stats" aria-label="Settings and progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>'
+   +(showStrip?strip:'')
+   +'<nav class="tabs">'+[['today','Today'],['week','Plan'],['food','Food'],['track','Track'],['stats','Stats']].map(v=>'<a href="#'+v[0]+'" class="'+(S.view===v[0]?'on':'')+'" aria-label="'+v[1]+'" title="'+v[1]+'">'+navIc(v[0])+'<span>'+v[1]+'</span></a>').join('')+'</nav>';
 }
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-dstrip]');if(!t)return;S.date=t.dataset.dstrip;S.keepOpen=false;S.wo=null;S.orig=false;render()});
 
 /* ---------- today ---------- */
 function sessBody(sess,s){
