@@ -12,9 +12,25 @@ const DN=['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const nice=s=>DN[dow(s)]+' '+(+s.slice(8,10))+' '+MN.at(+s.slice(5,7)-1);
 const todayS=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const START='2026-11-28',END='2027-11-25';
-const RACES=[['2027-02-05','Warm-up race'],['2027-02-20','Round 1'],['2027-03-21','Round 2'],['2027-04-11','Round 3'],['2027-05-02','Round 4'],['2027-05-16','Round 5'],['2027-06-06','Round 6'],['2027-07-11','Round 7'],['2027-08-08','Round 8'],['2027-09-19','Round 9']];
-const PH=[['2026-11-28','2026-12-20','Build','#111'],['2026-12-21','2026-12-27','Deload','#8a8a86'],['2026-12-28','2027-01-24','Strength + power','#e4002b'],['2027-01-25','2027-02-19','Taper','#111'],['2027-02-20','2027-09-19','Race season','#3a3a3a'],['2027-09-20','2027-10-10','Rest','#8a8a86'],['2027-10-11','2027-11-25','Off-season','#5c5c58']];
+/* ---------- per-athlete calendar (Kayden's is the default) ---------- */
+const KAY={start:'2026-11-28',testEnd:'2026-12-01',p1s:'2026-11-30',p1e:'2026-12-20',dle:'2026-12-27',p2s:'2026-12-28',p2e:'2027-01-24',p3s:'2027-01-25',p3e:'2027-02-19',inw:'2027-02-22',mini:'2027-06-06',seasonEnd:'2027-09-19',tre:'2027-10-10',offs:'2027-10-11',end:'2027-11-25',
+  races:[['2027-02-05','Warm-up race'],['2027-02-20','Round 1'],['2027-03-21','Round 2'],['2027-04-11','Round 3'],['2027-05-02','Round 4'],['2027-05-16','Round 5'],['2027-06-06','Round 6'],['2027-07-11','Round 7'],['2027-08-08','Round 8'],['2027-09-19','Round 9']]};
+let START,END,RACES,PH,D,CFG=null,_cfgKey=null;
+const addD=(s,k)=>toS(toN(s)+k);
+function calFrom(cfg){
+  if(!cfg||!cfg.start||!cfg.r1)return KAY;
+  let st=cfg.start;while(dow(st)!==6)st=addD(st,1);
+  const races=(cfg.races||[]).filter(r=>r&&/^\d{4}-\d\d-\d\d$/.test(r[0])).map(r=>[r[0],String(r[1]||'Race').slice(0,40)]);
+  if(!races.some(r=>r[0]===cfg.r1))races.push([cfg.r1,'Round 1']);races.sort((a,b)=>a[0].localeCompare(b[0]));
+  const d={start:st,testEnd:addD(st,3),p1s:addD(st,2),races};
+  const r1=cfg.r1;let p3s=addD(r1,-26);if(toN(p3s)<=toN(d.testEnd))p3s=addD(d.testEnd,1);
+  d.p3s=p3s;d.p3e=addD(r1,-1);const L=toN(p3s)-toN(d.testEnd)-1;
+  if(L>=49){d.p1e=addD(p3s,-36);d.dle=addD(p3s,-29);d.p2s=addD(p3s,-28)}else if(L>=21){d.p1e=addD(p3s,-22);d.dle=addD(p3s,-15);d.p2s=addD(p3s,-14)}else{d.p1e=addD(p3s,-1);d.dle=d.p1e;d.p2s=p3s}
+  d.p2e=addD(p3s,-1);d.inw=addD(r1,2);d.mini=addD(r1,106);d.seasonEnd=races[races.length-1][0];if(toN(d.seasonEnd)<toN(r1))d.seasonEnd=r1;
+  d.tre=addD(d.seasonEnd,21);d.offs=addD(d.tre,1);d.end=addD(st,362);if(toN(d.end)<toN(d.offs)+28)d.end=addD(d.offs,56);return d}
+function applyCfg(cfg){const k=JSON.stringify(cfg||null);if(k===_cfgKey)return;_cfgKey=k;CFG=cfg&&cfg.start?cfg:null;D=calFrom(CFG);START=D.start;END=D.end;RACES=D.races;
+  PH=[[D.start,D.p1e,'Build'],[addD(D.p1e,1),D.dle,'Deload'],[D.p2s,D.p2e,'Strength + power'],[D.p3s,D.p3e,'Taper'],[addD(D.p3e,1),D.seasonEnd,'Race season'],[addD(D.seasonEnd,1),D.tre,'Rest'],[D.offs,D.end,'Off-season']].filter(p=>toN(p[1])>=toN(p[0])).map(p=>[p[0],p[1],p[2],'#111'])}
+applyCfg(null);
 
 /* ---------- state ---------- */
 const S={days:{},track:{},tracks:{},reviews:{},gpsx:{},prof:{},view:'today',date:null,trk:null,tk:null,db:null,msg:'',del:null};
@@ -25,19 +41,19 @@ function ctx(s){
   const n=toN(s),w=dow(s),c={s,n,w,mode:'p1',wk:1,k:null,race:null,label:''};
   for(const [r,name] of RACES){const k=toN(r)-n;if(k>=-1&&k<=6){c.k=k;c.race=name;break}}
   const wkOf=a=>Math.floor((n-toN(a))/7)+1;
-  if(n<toN(START)){c.mode='pre';c.label='Starts Sat 28 Nov'}
-  else if(n<=toN('2026-12-01')){c.mode='test';c.label='Week 1 · Testing'}
-  else if(n<=toN('2026-12-20')){c.mode='p1';c.wk=wkOf('2026-11-30');c.label='Phase 1 · Build · Week '+c.wk}
-  else if(n<=toN('2026-12-27')){c.mode='dl';c.label='Deload week'}
-  else if(n<=toN('2027-01-24')){c.mode='p2';c.wk=wkOf('2026-12-28');c.label='Phase 2 · Strength + power · Week '+c.wk}
-  else if(n<=toN('2027-02-19')){c.mode='p3';c.wk=wkOf('2027-01-25');c.label='Phase 3 · Sharpen + taper · Week '+c.wk}
-  else if(n<=toN('2027-09-19')){
+  if(n<toN(START)){c.mode='pre';c.label='Starts '+nice(START)}
+  else if(n<=toN(D.testEnd)){c.mode='test';c.label='Week 1 · Testing'}
+  else if(n<=toN(D.p1e)){c.mode='p1';c.wk=wkOf(D.p1s);c.label='Phase 1 · Build · Week '+c.wk}
+  else if(n<=toN(D.dle)){c.mode='dl';c.label='Deload week'}
+  else if(n<=toN(D.p2e)){c.mode='p2';c.wk=wkOf(D.p2s);c.label='Phase 2 · Strength + power · Week '+c.wk}
+  else if(n<=toN(D.p3e)){c.mode='p3';c.wk=wkOf(D.p3s);c.label='Phase 3 · Sharpen + taper · Week '+c.wk}
+  else if(n<=toN(D.seasonEnd)){
     let prev=null,next=null;for(const [r] of RACES){const rn=toN(r);if(rn<=n)prev=rn;else if(next===null)next=rn}
-    if(prev!==null&&next!==null&&prev>=toN('2027-06-06')&&next-prev>=28){c.mode='mini';c.wk=(Math.floor(Math.max(0,n-prev-1)/7)%4)+1;c.label='In-season · Mini-build · Week '+c.wk}
-    else{c.mode='in';c.wk=Math.floor((n-toN('2027-02-22'))/7)+1;c.label='In-season · Maintenance'}
+    if(prev!==null&&next!==null&&prev>=toN(D.mini)&&next-prev>=28){c.mode='mini';c.wk=(Math.floor(Math.max(0,n-prev-1)/7)%4)+1;c.label='In-season · Mini-build · Week '+c.wk}
+    else{c.mode='in';c.wk=Math.floor((n-toN(D.inw))/7)+1;c.label='In-season · Maintenance'}
   }
-  else if(n<=toN('2027-10-10')){c.mode='tr';c.label='Transition · Active rest'}
-  else{c.wk=(Math.floor((n-toN('2027-10-11'))/7)%4)+1;c.mode=c.wk===4?'dl':'off';c.label='Off-season build · Week '+c.wk}
+  else if(n<=toN(D.tre)){c.mode='tr';c.label='Transition · Active rest'}
+  else{c.wk=(Math.floor((n-toN(D.offs))/7)%4)+1;c.mode=c.wk===4?'dl':'off';c.label='Off-season build · Week '+c.wk}
   return c;
 }
 const big=m=>m==='p2'||m==='mini';
@@ -193,12 +209,14 @@ function testSess(which){
 }
 const EQ={bike:['Wattbike or spin bike','85–95 rpm, seated'],air:['Air bike (Assault or Echo)','Arms and legs together. No air bike: Wattbike'],row:['Rower','Damper 5. 18–22 strokes a minute easy, 24–28 for hard blocks'],tread:['Treadmill incline walk','8–10% incline, 5.5–6.5 km/h. Raise the incline to lift HR, never run'],road:['Road bike outdoors','Or the Wattbike indoors if it is wet or dark'],mixed:['Rower + stations','See each station']};
 const equip=(k,w)=>({z2:w===3?'tread':'bike',ap:'air',thr:'row',sim:'air',sim3:'air',short:'air',circ:'mixed',long:'road',recov:'bike'}[k]||null);
-function plan(s){const r=plan0(s),w=dow(s);for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};return r}
+function plan(s){let r=plan0(s);const w=dow(s);
+  if(CFG&&+CFG.daily===1&&w<=4&&r.am&&r.pm&&r.c.mode!=='test'){r=(w===2||w===4)?{...r,am:null,pm:r.am,title:r.am.title||r.title}:{...r,am:null}}
+  for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};return r}
 function plan0(s){
   const c=ctx(s),w=c.w,m=c.mode,wk=c.wk;
   const P=(o)=>({c,am:null,pm:null,track:null,type:'gym',...o});
-  if(m==='pre')return P({type:'rec',title:'Plan starts Saturday 28 November'});
-  if(c.k!==null&&c.n>=toN('2027-01-25')){
+  if(m==='pre')return P({type:'rec',title:'Plan starts '+nice(START)});
+  if(c.k!==null&&c.n>=toN(D.p3s)){
     const k=c.k,we=w>=6;
     if(k===0)return P({type:'race',title:c.race+': race day',track:{kind:'race',tier:'KEY'}});
     if(k===-1)return P({type:'rec',title:'Day after racing: full rest',am:cond('mob',m,wk)});
@@ -211,13 +229,15 @@ function plan0(s){
     if(k===6)return P({type:'rec',title:'Easy Zone 2',am:cond('z2','race',wk)});
   }
   if(m==='test'){
-    if(s==='2026-11-28')return P({type:'track',title:'Day 1 · Track: baseline day',track:{kind:'base',tier:'KEY'}});
-    if(s==='2026-11-29')return P({type:'track',title:'Track: speed + starts',track:{kind:'sun',tier:'HARD'}});
-    if(s==='2026-11-30')return P({title:'Test day 1',am:testSess('row'),pm:testSess('t1')});
-    if(s==='2026-12-01')return P({title:'Zone 2 + test day 2',am:cond('z2','p1',1),pm:testSess('t2')});
+    if(s===D.start)return P({type:'track',title:'Day 1 · Track: baseline day',track:{kind:'base',tier:'KEY'}});
+    if(s===addD(D.start,1))return P({type:'track',title:'Track: speed + starts',track:{kind:'sun',tier:'HARD'}});
+    if(s===addD(D.start,2))return P({title:'Test day 1',am:testSess('row'),pm:testSess('t1')});
+    if(s===addD(D.start,3))return P({title:'Zone 2 + test day 2',am:cond('z2','p1',1),pm:testSess('t2')});
   }
   if(m==='tr'){if(w>=6)return P({type:'rec',title:'Optional fun ride. No plan, no stopwatch',am:cond('rest',m,wk)});return P({type:'rec',title:'Active rest',am:cond('rest',m,wk)})}
   const deloadWeek=m==='dl';
+  if(w===6&&CFG&&CFG.ride==='sun')return P({type:'gym',title:'Long Zone 2 ride',am:cond('long',m,wk)});
+  if(w===7&&CFG&&CFG.ride==='sat')return P({type:'rec',title:'Easy Zone 2 + mobility',am:cond('z2',m,wk)});
   if(w===6)return P({type:'track',title:'Track: technique + race motos',track:{kind:'sat',tier:big(m)||m==='p3'?'KEY':'HARD'}});
   if(w===7)return deloadWeek?P({type:'rec',title:'Deload: Sunday off'}):P({type:'track',title:'Track: speed, lines, starts',track:{kind:'sun',tier:'HARD'}});
   if(w===5){if(hardBlock(m))return P({type:'gym',title:'Recovery + long Zone 2 ride',am:cond('recov',m,wk),pm:cond('long',m,wk)});return P({type:'rec',title:'Recovery: mobility, prep the bike, eat, sleep',am:cond('recov',m,wk)})}
@@ -232,7 +252,7 @@ function dayLoad(p){let a=0,k=false;for(const x of [p.am,p.pm,p.track]){if(x&&x.
 const TT={sand:'Sand',hardpack:'Hardpack',loam:'Loam / intermediate',mud:'Mud / wet',mixed:'Mixed'};
 const TIP={sand:'Sand: stay on the throttle, weight back through whoops, momentum over braking. Fitness costs more here: drink between every session.',hardpack:'Hardpack: braking points and smooth throttle matter most. Keep weight on the front wheel into turns; find the traction lines.',loam:'Loam: ruts form fast. Commit to a line, look through the rut. Re-walk the key corners before session 3.',mud:'Mud: line choice and momentum. Shorter motos, extra tear-offs, skip hot laps if it is unsafe.',mixed:'Mixed: walk it first and note where the ground changes; adjust braking and lines for each section.'};
 const FOCUS=['Corners: ruts, inside lines, body forward','Braking: late, hard, straight-line braking','Jumps and rhythm sections','Whoops and rough ground','Starts and the first corner','Different ground (try a new track)','Passing and line choice','Full race-day simulation'];
-function focusFor(s){return FOCUS[(Math.floor((toN(s)-toN('2026-11-28'))/7)%8+8)%8]}
+function focusFor(s){return FOCUS[(Math.floor((toN(s)-toN(START))/7)%8+8)%8]}
 function trackPlan(kind,s,type,n,len){
   const c=ctx(s),long=c.mode!=='test'&&c.mode!=='p1'&&c.mode!=='dl'&&c.mode!=='off';
   const moto=long?'30 min + 2 laps':'20 min',L=len||20;
@@ -253,11 +273,14 @@ const setupSum=st=>{if(!st)return '';const g=k=>getK(st,k);const a=[];if(g('fork
 
 /* ---------- nutrition ---------- */
 function fuel(p){
-  const cut=p.c.n<toN('2027-01-25');
+  const goal=CFG?CFG.goal:'lose',cut=goal==='lose'&&p.c.n<toN(D.p3s)&&p.c.n>=toN(START)-30;
   const t=(cut?{gym:[3100,160,455,70,3.5],rec:[2800,160,380,70,3],track:[3500,160,560,70,4.5],race:[3800,150,650,70,4.5]}:{gym:[3400,155,525,75,3.5],rec:[3000,155,440,75,3],track:[3800,150,620,75,4.5],race:[3800,150,650,70,4.5]})[p.type];
   const G=[['05:00','1 slice toast with jam or honey',100],['06:30','Overnight oats: 80 g oats, 300 ml semi-skimmed milk, 150 g 0% Greek yoghurt, frozen berries blended in, 1 tsp honey',550],['10:00','2 tuna, chicken or egg wraps',450],['13:00','Prep box',700],['15:30','Bagel with jam + 250 g 0% Greek yoghurt',350],['17:15','2 rice cakes with jam (fuel for the PM session)',150],['19:15','Pasta bolognese: 100 g pasta (dry), 150 g 5% mince, sauce with blended hidden veg',600],['20:45','250 g cottage cheese or 0% Greek yoghurt',200]];
   let meals=p.type==='gym'?G:p.type==='rec'?G.filter((x,i)=>i!==0&&i!==5):[['Wake','500 ml water + electrolyte tab or a pinch of salt',0],['3–4 h before','Oats with honey, 2 slices toast with jam, 2 eggs',750],['60–90 min before','Bagel with jam or honey + 500 ml electrolyte drink',350],['Between sessions','30–60 g carbs: jam sandwich, rice cakes with honey or jelly sweets + 500–750 ml fluid (every break)',600],['After last session','Chicken wraps + 500 ml milk',700],['Evening','Big dinner: rice or pasta, chicken or mince, veg',900],['Before bed','250 g cottage cheese or 0% Greek yoghurt',200]];
   if(!cut&&(p.type==='gym'||p.type==='rec'))meals=meals.concat([['16:30','Extra for maintenance: bagel with peanut butter + 300 ml milk',300]]);
+  if(CFG){const r=bmrOf(CFG)/1709,kg=+CFG.weight||70,up=goal==='build'?1.07:1,rd=x=>Math.round(x/50)*50;
+    const sw=diet(CFG.diet);meals=meals.map(m=>[m[0],sw(m[1]),Math.round(m[2]*r*up/10)*10]);
+    return {kcal:rd(t[0]*r*up),p:Math.round(kg*(cut?2.3:2.2)),c:Math.round(t[2]*r*up),f:Math.round(t[3]*r),water:+(t[4]*kg/70).toFixed(1),meals,cut,scaled:r*up}}
   return {kcal:t[0],p:t[1],c:t[2],f:t[3],water:t[4],meals,cut};
 }
 
@@ -304,3 +327,8 @@ const bestOf=t=>{const v=Object.values(t.log||{}).map(x=>+x.best).filter(x=>x>0)
 const gapOf=t=>{const v=Object.values(t.log||{}).filter(x=>+x.best>0&&+x.last2>0).map(x=>x.last2-x.best);return v.length?Math.min(...v):null};
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'track';
 
+
+/* ---------- personal numbers ---------- */
+const bmrOf=c=>{const w=+c.weight||70,h=+c.height||175,a=+c.age||25;return Math.max(1200,10*w+6.25*h-5*a+(c.sex==='f'?-161:5))};
+const diet=d=>{const R={veg:[[/chicken or mince/gi,'Quorn mince'],[/5% mince/gi,'Quorn mince'],[/chicken/gi,'tofu or Quorn'],[/mince/gi,'Quorn mince'],[/tuna, /gi,''],[/tuna/gi,'egg'],[/teriyaki tofu or Quorn/gi,'teriyaki tofu']],df:[[/semi-skimmed milk/gi,'oat milk'],[/0% Greek yoghurt/gi,'soya yoghurt'],[/Greek yoghurt/gi,'soya yoghurt'],[/cottage cheese/gi,'soya yoghurt'],[/\bmilk\b/gi,'oat milk']]};
+  const sets=String(d||'').split(',').map(x=>R[x]).filter(Boolean);return t=>sets.reduce((x,rs)=>rs.reduce((y,[a,b])=>y.replace(a,b),x),t)};

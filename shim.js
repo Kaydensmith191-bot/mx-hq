@@ -12,7 +12,7 @@ const ch=(type,id,data)=>({type,doc:{id,data:()=>clone(data)}});
 function emitCol(col,changes,fromCache){(listeners[col]||[]).forEach(f=>{try{f(snap(changes,fromCache))}catch(e){console.error(e)}})}
 function emitDoc(path){const [col,id]=path.split('/'),m=mem[col]||{},has=Object.prototype.hasOwnProperty.call(m,id);(docListeners[path]||[]).forEach(f=>{try{f({exists:has,data:()=>clone(m[id])})}catch(e){console.error(e)}})}
 async function loadCol(col){const m=cacheGet(col);mem[col]=m;
-  emitCol(col,Object.keys(m).map(id=>ch('added',id,m[id])),true);Object.keys(docListeners).filter(p=>p.startsWith(col+'/')).forEach(emitDoc);
+  emitCol(col,Object.keys(m).map(id=>ch('added',id,m[id])),true);Object.keys(docListeners).filter(p=>p.startsWith(col+'/')&&(p.split('/')[1] in m)).forEach(emitDoc);
   try{const {data,error}=await sb.from('docs').select('id,data').eq('col',col);if(error)throw error;
     const fresh={};data.forEach(r=>fresh[r.id]=r.data);const changes=[];
     Object.keys(m).forEach(id=>{if(!(id in fresh))changes.push(ch('removed',id,null))});
@@ -36,9 +36,11 @@ function loginUI(){return new Promise(res=>{const d=document.createElement('div'
   document.body.appendChild(d);const msg=t=>{document.getElementById('lg-m').textContent=t};
   const go=async up=>{const email=document.getElementById('lg-e').value.trim(),password=document.getElementById('lg-p').value;if(!email||password.length<8){msg('Enter your email and a password of at least 8 characters.');return}
     msg(up?'Creating your account…':'Signing in…');
-    const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
-    if(r.error){msg(/confirm/i.test(r.error.message)?'Account not confirmed yet. Tap the link in the email from Supabase (or tell Claude), then sign in.':r.error.message);return}
-    if(!r.data.session){msg('Account created. Confirm it from the email Supabase sent you (or tell Claude to confirm it), then sign in.');return}
+    let r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+    let out=r;if(up&&!r.error&&!r.data.session){out=await sb.auth.signInWithPassword({email,password})}
+    if(out.error){const m=out.error.message||'';msg(/database error|saving new user|invite/i.test(m)?'This app is invite only. Ask the person who invited you to add this email.':/invalid login/i.test(m)?'Email or password is wrong.':/confirm/i.test(m)?'Account created. Check your email to confirm it, then sign in.':m);return}
+    if(!out.data.session){msg('Account created. Check your email to confirm it, then sign in.');return}
+    r=out;
     d.remove();res(r.data.session)};
   document.getElementById('lg-in').onclick=()=>go(false);document.getElementById('lg-up').onclick=()=>go(true);
   d.addEventListener('keydown',e=>{if(e.key==='Enter')go(false)})})}
