@@ -1,3 +1,6 @@
+/* sleep: accepts 7.8, 7:50, 7:50h, 7h50, 7h 50m */
+const sleepH=x=>{if(x==null||x==='')return NaN;if(typeof x==='number')return x;const t=String(x).toLowerCase().replace(/\s+/g,'');let m=/^(\d{1,2})(?::|h)(\d{1,2})(?:m|min|mins)?h?$/.exec(t);if(m)return +(+m[1]+(+m[2])/60).toFixed(2);m=/^(\d{1,2}(?:\.\d+)?)(?:h|hr|hrs|hours?)?$/.exec(t);return m?+m[1]:NaN};
+const fmtH=h=>{const m=Math.round(h*60);return Math.floor(m/60)+':'+String(m%60).padStart(2,'0')};
 
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,7 +18,7 @@ const PH=[['2026-11-28','2026-12-20','Build','#111'],['2026-12-21','2026-12-27',
 
 /* ---------- state ---------- */
 const S={days:{},track:{},tracks:{},reviews:{},gpsx:{},prof:{},view:'today',date:null,trk:null,tk:null,db:null,msg:'',del:null};
-S.date=toN(todayS())<toN(START)?START:todayS();
+S.date=todayS();
 
 /* ---------- phase logic ---------- */
 function ctx(s){
@@ -280,7 +283,7 @@ const getK=(o,k)=>k.split('.').reduce((x,p)=>x&&x[p],o);
 function parseT(v){v=String(v).trim();if(!v)return '';if(v.includes(':')){const [a,b]=v.split(':');const s=(+a)*60+(+b);return isFinite(s)?s:''}const n=+v;return isFinite(n)?n:''}
 const fmtT=s=>{if(s===''||s==null||!isFinite(s))return '';s=+s;if(s<60)return s.toFixed(1);const m=Math.floor(s/60);return m+':'+(s-m*60).toFixed(1).padStart(4,'0')};
 const fid=(doc,k)=>(doc+'-'+k).replace(/[^a-z0-9]/gi,'_');
-function inp(doc,k,o={}){const v=getK(docObj(doc),k);const val=o.time?fmtT(v):(v??'');return '<input id="'+esc(fid(doc,k))+'" data-doc="'+esc(doc)+'" data-k="'+esc(k)+'"'+(o.time?' data-t="1" inputmode="decimal"':(o.text?'':' inputmode="decimal"'))+' value="'+esc(val)+'" placeholder="'+esc(o.ph||'')+'" aria-label="'+esc(o.lab||k)+'">'}
+function inp(doc,k,o={}){const v=getK(docObj(doc),k),isSl=k==='whoop.sleep';if(isSl)o={...o,text:true,ph:o.ph||'7:50'};const val=o.time?fmtT(v):isSl&&isFinite(sleepH(v))?fmtH(sleepH(v)):(v??'');return '<input id="'+esc(fid(doc,k))+'" data-doc="'+esc(doc)+'" data-k="'+esc(k)+'"'+(o.time?' data-t="1" inputmode="decimal"':(o.text?'':' inputmode="decimal"'))+' value="'+esc(val)+'" placeholder="'+esc(o.ph||'')+'" aria-label="'+esc(o.lab||k)+'">'}
 function chk(doc,k,lab){const v=getK(docObj(doc),k);return '<input type="checkbox" id="'+esc(fid(doc,k))+'" data-doc="'+esc(doc)+'" data-k="'+esc(k)+'" '+(v?'checked':'')+' aria-label="'+esc(lab||k)+'">'}
 function fld(doc,k,lab,o){return '<div><label for="'+esc(fid(doc,k))+'">'+esc(lab)+'</label>'+inp(doc,k,{lab,...(o||{})})+'</div>'}
 function lastFor(id,before){
