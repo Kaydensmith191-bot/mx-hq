@@ -93,6 +93,7 @@ const CORE={
 };
 function finisher(key,m){
   if(!hardBlock(m))return null;const p2=big(m);
+  if(isBW()){if(key==='A')return E('fin_a','Finisher: bike sprint + hold',p2?8:6,'Bike: 30 s all-out up a hill or on the turbo ('+hr(.9,1)+') → 30 s attack-position wall sit, arms out','Max effort','45 s','The hard part of the day. Legs will be gone: hold the position anyway. Last round: hold until you physically cannot. Log the time.',{rounds:true,fin:true});if(key==='D')return E('fin_d','Finisher: arm-pump killer',p2?5:4,'60 s towel hang → 30 s towel wring → 20 push-ups','Bodyweight','45 s','Forearms full of pump: relax the grip between, breathe through it. Last round: hang until your hands open. Lap 12 feels like this.',{rounds:true,fin:true});return null}
   if(key==='A')return E('fin_a','Finisher: bike + hold',p2?8:6,'Air bike: 30 s all-out ('+hr(.9,1)+') → 30 s attack-position hold with dumbbells','Max effort','45 s','The hard part of the day. Legs will be gone: hold the position anyway. Last round: hold the attack position until you physically cannot. Log the time.',{rounds:true,fin:true});
   if(key==='D')return E('fin_d','Finisher: arm-pump killer',p2?5:4,'60 s gripper → 30 s dead hang → 20 push-ups','Light gripper','45 s','Forearms full of pump: relax the grip between, breathe through it. Last round: dead hang until your hands open. Lap 12 feels like this.',{rounds:true,fin:true});
   return null;
@@ -107,6 +108,7 @@ function DIGDEEP(m){const p2=big(m);return {title:'Dig Deep · 30 min + 2 laps',
   {id:'dd6',label:'Lap 2: air bike, 2 min all-out',detail:'Beat lap 1. This is the last 2 laps of a moto.',secs:120,fields:[['cal','Cals'],['hr','Max HR']]},
   {id:'dd7',label:'Log your total',detail:'Total rounds + both laps\' cals. Beat it next week. Stop only for sharp pain, dizziness or chest pain: pushing through fatigue is the point, pushing through injury is not.',fields:[['tot','Total rounds'],['score','Total cals']]}]}}
 function strength(key,m,wk){
+  if(isBW())return bwStrength(key,m,wk);
   const p2=big(m),P=pctFor(m==='dl'?'dl':(m==='off'?'p1':m),wk);
   const L={
   A:()=>[E('squat','Back squat',p2?5:4,p2?'3–5':'6–8',{pct:P,of:'squat'},'2–3 min','Brace, sit between your heels, drive up hard. Stop 2 reps short.'),
@@ -153,7 +155,7 @@ function strength(key,m,wk){
 }
 const SNAME={A:'Strength A · Lower body',B:'Strength B · Pull, grip, neck',C:'Strength C · Power, hinge, single leg',D:'Strength D · Push, arm-pump endurance',A3:'Strength A · Heavy, low volume',C3:'Strength C + pulls · Heavy, low volume',GN:'Mobility + grip and neck',FBA:'Full body A',FBB:'Full body B',FBC:'Full body C · Light',FBM:'Full body · Race week',PR:'Primer'};
 const STIER={A:'HARD',B:'MOD',C:'HARD',D:'HARD',A3:'HARD',C3:'HARD',GN:'EASY',FBA:'MOD',FBB:'MOD',FBC:'MOD',FBM:'MOD',PR:'EASY'};
-const WARM=()=>({title:'Warm-up · 15 min',steps:['Rower: 5 min, damper 4–5, 20–24 strokes a minute, building from easy to '+hr(.65,.7),'Leg swings: 10 forward-and-back, then 10 side-to-side, each leg','World\'s greatest stretch: 5 each side, 2 s in each position','Bodyweight squats: 10 with a 2 s pause at the bottom','Glute bridges: 10 with a 2 s squeeze at the top','Band pull-aparts: 15 with a light resistance band','Reaction drops: catch a tennis ball before its second bounce, 6 catches (wall or partner)','Reaction starts: 6 × 5 m sprints from attack position on a clap or app beep','Single-leg balance on a cushion: 30 s each leg, last 10 s eyes closed']});
+const WARM=()=>isBW()?{title:'Warm-up · 12 min',steps:['Bike or jog: 5 min easy, building to '+hr(.65,.7),'Leg swings: 10 each way, each leg','World\'s greatest stretch: 4 each side','Inchworm to push-up: 6','Squat to stand: 8','Scapular pull-ups on the bar: 8','Pogo jumps: 2 × 15 s']}:({title:'Warm-up · 15 min',steps:['Rower: 5 min, damper 4–5, 20–24 strokes a minute, building from easy to '+hr(.65,.7),'Leg swings: 10 forward-and-back, then 10 side-to-side, each leg','World\'s greatest stretch: 5 each side, 2 s in each position','Bodyweight squats: 10 with a 2 s pause at the bottom','Glute bridges: 10 with a 2 s squeeze at the top','Band pull-aparts: 15 with a light resistance band','Reaction drops: catch a tennis ball before its second bounce, 6 catches (wall or partner)','Reaction starts: 6 × 5 m sprints from attack position on a clap or app beep','Single-leg balance on a cushion: 30 s each leg, last 10 s eyes closed']});
 const restS=r=>{r=String(r||'');const n=(r.match(/\d+/g)||[]).map(Number);if(!n.length)return 0;const a=n.length>1?(n[0]+n[1])/2:n[0];return /min/.test(r)?a*60:a};
 const exMin=x=>x.unit==='min'?x.sets:(x.sets*(restS(x.rest)+50)/60)*(/each (leg|side|arm)/.test(x.reps)?1.5:1);
 const CDROWS=()=>[{id:'cd1',label:'Wattbike or spin bike: 5 min easy under '+Math.round(MAXHR()*.6)+' bpm, 80–90 rpm',detail:'Let your heart rate come all the way down',secs:300},{id:'cd2',label:'Couch stretch: 60 s each side',detail:'Squeeze the glute of the back leg',secs:120},{id:'cd3',label:'Child\'s pose with side reach: 60 s',detail:'Walk the hands left, then right, 30 s each',secs:60},{id:'cd4',label:'Forearm flexor stretch: 60 s each arm',detail:'Palm flat on the floor or wall, fingers pointing back',secs:120}];
@@ -169,7 +171,7 @@ function pmStrength(key,m,wk,w,core){
     else if(first.id==='box')warm.steps.push('Ramp-up for box jumps: 3 easy jumps onto a low box, then 2 at your working height')}
   {const bb=ex.find(x=>x.load&&typeof x.load==='object'&&!x.load.note);if(bb&&bb!==first){const v=e1(bb.load.of),rk=x=>Math.max(20,Math.round(x/2.5)*2.5);warm.steps.push('Before your first working set of '+bb.name.toLowerCase()+': '+(v>0?'empty bar × 10, '+[.4,.6,.8].map((f,i)=>rk(v*bb.load.pct*f)+' kg × '+[5,3,2][i]).join(', '):'empty bar × 10, then 3 lighter sets of 5, 3 and 2'))}}
   const dd=key==='C'&&hardBlock(m);
-  let all=core&&CORE[w]&&!dd?ex.concat(CORE[w]):ex;
+  const CR=isBW()?BWCORE:CORE;let all=core&&CR[w]&&!dd?ex.concat(CR[w]):ex;
   if(dd)all=all.filter(x=>x.id!=='lat');
   const fin=finisher(key,m);if(fin)all=all.concat([fin]);
   const tier=(fin&&big(m))||dd?'KEY':STIER[key];
@@ -178,14 +180,16 @@ function pmStrength(key,m,wk,w,core){
   if(key==='GN')steps=MOB;
   const lift=all.reduce((a,x)=>a+exMin(x),0)+(steps?15:0);
   let est=15+lift;
-  if(dd){post.push(DIGDEEP(m));est+=34}
+  if(dd){post.push(isBW()?BWDIG(m):DIGDEEP(m));est+=34}
   if(key==='GN'){post.push({title:'Easy aerobic · 30 min',rows:[{id:'z2',label:'Wattbike or spin bike: 30 min easy at '+hr(.6,.7)+', 85–95 rpm',detail:'Conversational pace',secs:1800}]},{title:'Race visualisation · 10 min',rows:[{id:'vis',label:'Sit quietly, eyes closed: run your gate routine, the start and the first 3 corners in your head, 5 times',detail:'See the lines, feel the clutch, breathe out on the drop of the gate',secs:600}]});est+=40}
   else if(!race){const fl=Math.min(30,Math.max(0,Math.round((90-est-10)/5)*5));if(fl>=5){post.push({title:'Engine add-on · '+fl+' min',rows:[{id:'fl',label:'Wattbike or spin bike: '+fl+' min Zone 2 at '+hr(.6,.7)+', 85–95 rpm',detail:'Easy and steady after lifting: builds the aerobic base without extra fatigue',secs:fl*60}]});est+=fl}}
   post.push({title:'Cool-down · '+(race?6:10)+' min',rows:race?CDROWS().slice(0,2):CDROWS()});est+=race?6:10;
   const mins=Math.round(est/5)*5;
-  return {id:'pm',time:'17:45',title:SNAME[key],code:key.replace('3',''),mins,tier,warm,ex:all,steps,post};
+  return bwify({id:'pm',time:'17:45',title:(isBW()?BWNAME:SNAME)[key],code:key.replace('3',''),mins,tier,warm,ex:all,steps,post});
 }
-function cond(kind,m,wk){
+function cond(kind,m,wk){const r=cond0(kind,m,wk);if(!isBW()||!r)return r;if(r.kind==='circ')return {...r,steps:['Warm up 8 min easy on the bike or a jog','60 s per station, no rest between stations, 2 min easy after each round. 3 rounds:','1 Burpees, hard · 2 Attack-position wall sit · 3 Lateral bounds, stick each landing · 4 Inverted row under a table · 5 Plank with shoulder taps · 6 Towel hang from the bar, relaxed grip · 7 Jump squats · 8 Mountain climbers','Finish: 4 min all-out on the bike. That is your last 2 laps','Target '+hr(.85,.95)+' throughout']};
+  const o=bwify(r);if(o.kind==='z2'&&o.main){const mm=Math.min(75,Math.round(o.main*1.25/5)*5);o.main=mm;o.mins=Math.max(o.mins,mm+10);o.steps=o.steps.map(x=>x.replace(r.main+' min steady',mm+' min steady'))}if(o.kind==='long'){const mm=o.main+30;o.main=mm;o.mins=mm;o.steps=o.steps.map(x=>x.replace(r.main+' min continuous',mm+' min continuous'))}return o}
+function cond0(kind,m,wk){
   const z2={p1:50,p2:50,mini:50,p3:45,dl:40,in:45,off:50,race:30}[m]||45;
   const A=o=>({id:'am',time:'05:30',...o});
   if(kind==='z2')return A({kind:'z2',main:z2,title:'Zone 2 aerobic',code:'Z2',tier:'EASY',mins:m==='race'?40:60,hr:hr(.6,.7),steps:['Warm up 5 min easy',z2+' min steady at '+hr(.6,.7)+'. You should be able to talk in full sentences.','Air bike, rower, run or road bike','10 min mobility after: '+MOB.slice(0,3).join(' · ')],why:'Easy on purpose. This builds the aerobic base that makes you recover faster between efforts and between motos. Going harder here ruins it.'});
@@ -203,13 +207,14 @@ function cond(kind,m,wk){
   if(kind==='rest')return A({kind:'rest',title:'Active rest',code:'REST',tier:'EASY',mins:40,steps:['30–45 min of anything easy you enjoy: bike, swim, walk','10 min mobility','Get any niggles checked by a physio'],why:'Recover fully before the next build.'});
 }
 function testSess(which){
+  if(isBW())return bwTest(which);
   if(which==='row')return {id:'am',time:'05:30',title:'Test: 2 km row',code:'TEST',tier:'KEY',mins:30,steps:['Rower, damper 5: warm up 10 min easy, then 3 × 20 s hard','Rower: 2 km all-out. Log your time in seconds','Log heart rate at the finish and 60 s later'],tests:[['row','2 km row (seconds)'],['hrdrop','HR drop after 60 s (bpm)']]};
   if(which==='t1')return {id:'pm',time:'17:45',title:'Test: squat, core, grip, calves',code:'TEST',tier:'KEY',mins:75,warm:WARM(),steps:['Back squat: 5 at 40 kg, 3 at 60 kg, then add 5–10 kg sets of 3 until it is hard but clean. Log the best set of 3','Dead hang: one max hold','Side plank: max hold each side, log the weaker','Strict hanging leg raise: max reps','Single-leg calf raise off a step: max reps each leg, log the weaker'],tests:[['squat','Back squat best set of 3 (kg)'],['hang','Dead hang (s)'],['plank','Side plank, weaker side (s)'],['hlr','Hanging leg raises (reps)'],['calf','Calf raises, weaker leg (reps)']]};
   if(which==='t2')return {id:'pm',time:'17:45',title:'Test: trap-bar + 10-minute chin-ups',code:'TEST',tier:'KEY',mins:60,warm:WARM(),steps:['Trap-bar deadlift: ramp in sets of 3 to a hard, clean set of 3','Rest 10 min','Chin-ups: as many as possible in 10 minutes. Overhand grip, wider than shoulders, dead hang start, rest when needed'],tests:[['trap','Trap-bar best set of 3 (kg)'],['chin','Chin-ups in 10 min']]};
 }
-const EQ={bike:['Wattbike or spin bike','85–95 rpm, seated'],air:['Air bike (Assault or Echo)','Arms and legs together. No air bike: Wattbike'],row:['Rower','Damper 5. 18–22 strokes a minute easy, 24–28 for hard blocks'],tread:['Treadmill incline walk','8–10% incline, 5.5–6.5 km/h. Raise the incline to lift HR, never run'],road:['Road bike outdoors','Or the Wattbike indoors if it is wet or dark'],mixed:['Rower + stations','See each station']};
-const equip=(k,w)=>({z2:w===3?'tread':'bike',ap:'air',thr:'row',sim:'air',sim3:'air',short:'air',circ:'mixed',long:'road',recov:'bike'}[k]||null);
-function plan(s){let r=plan0(s);const w=dow(s);
+const EQ={bike:['Wattbike or spin bike','85–95 rpm, seated'],air:['Air bike (Assault or Echo)','Arms and legs together. No air bike: Wattbike'],row:['Rower','Damper 5. 18–22 strokes a minute easy, 24–28 for hard blocks'],tread:['Treadmill incline walk','8–10% incline, 5.5–6.5 km/h. Raise the incline to lift HR, never run'],road:['Road bike outdoors','Or the Wattbike indoors if it is wet or dark'],bwcirc:['At home or in the garden','Bike or a run for the warm-up and the last 4 minutes'],bwbike:['Bike: road or turbo trainer','Intervals: a steady climb or the turbo. Easy rides: anywhere flat. Wet or dark: turbo'],mixed:['Rower + stations','See each station']};
+const equip=(k,w)=>isBW()?(k==='circ'?'bwcirc':k==='long'?'road':'bwbike'):({z2:w===3?'tread':'bike',ap:'air',thr:'row',sim:'air',sim3:'air',short:'air',circ:'mixed',long:'road',recov:'bike'}[k]||null);
+function plan(s){let r=plan0(s);const w=dow(s);if(isBW()&&r.title)r={...r,title:r.title.replace(/Strength/g,'Bodyweight').replace(/heavy /g,'sharp ').replace(/Zone 2 \+/,'Zone 2 ride +')};
   if(CFG&&+CFG.daily===1&&w<=4&&r.am&&r.pm&&r.c.mode!=='test'){r=(w===2||w===4)?{...r,am:null,pm:r.am,title:r.am.title||r.title}:{...r,am:null}}
   for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};return r}
 function plan0(s){
@@ -332,3 +337,60 @@ const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').sl
 const bmrOf=c=>{const w=+c.weight||70,h=+c.height||175,a=+c.age||25;return Math.max(1200,10*w+6.25*h-5*a+(c.sex==='f'?-161:5))};
 const diet=d=>{const R={veg:[[/chicken or mince/gi,'Quorn mince'],[/5% mince/gi,'Quorn mince'],[/chicken/gi,'tofu or Quorn'],[/mince/gi,'Quorn mince'],[/tuna, /gi,''],[/tuna/gi,'egg'],[/teriyaki tofu or Quorn/gi,'teriyaki tofu']],df:[[/semi-skimmed milk/gi,'oat milk'],[/0% Greek yoghurt/gi,'soya yoghurt'],[/Greek yoghurt/gi,'soya yoghurt'],[/cottage cheese/gi,'soya yoghurt'],[/\bmilk\b/gi,'oat milk']]};
   const sets=String(d||'').split(',').map(x=>R[x]).filter(Boolean);return t=>sets.reduce((x,rs)=>rs.reduce((y,[a,b])=>y.replace(a,b),x),t)};
+
+/* ---------- no-gym style: bodyweight + lots of cycling ---------- */
+const isBW=()=>!!(CFG&&CFG.style==='bw');
+const BWR=[[/Wattbike or spin bike/g,'Bike (road, or turbo if wet or dark)'],[/Air bike, rower, run or road bike/g,'Road bike outdoors, or the turbo if wet or dark'],[/on the road bike, turbo or air bike/g,'on the road bike (turbo if wet or dark)'],[/the Wattbike/g,'the turbo'],[/rower/gi,'bike'],[/Whoop red today/g,'Feeling wrecked today']];
+const bwify=o=>{const w=v=>typeof v==='string'?BWR.reduce((x,[a,b])=>x.replace(a,b),v):Array.isArray(v)?v.map(w):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='id'||k==='kind'||k==='code'?x:w(x)])):v;return isBW()?w(o):o};
+const BWNAME={A:'Bodyweight A · Legs',B:'Bodyweight B · Pull, grip, neck',C:'Bodyweight C · Jumps and single leg',D:'Bodyweight D · Push and arm-pump',A3:'Bodyweight A · Sharp, low volume',C3:'Bodyweight C + pulls · Sharp',GN:'Mobility + grip and neck',FBA:'Full body A',FBB:'Full body B',FBC:'Full body C · Light',FBM:'Full body · Race week',PR:'Primer'};
+function bwStrength(key,m,wk){const p2=big(m),up=(a,b)=>p2?b:a,BW='Bodyweight',BP='Backpack with 5–10 kg in it';
+  const L={
+  A:()=>[E('bss','Bulgarian split squat, back foot on a chair',4,up('12 each leg','10 each leg'),up(BW,BP),'90 s','Front shin near vertical, 3 s down, drive up.'),
+    E('jsq','Jump squat',4,up('8','6'),BW,'75 s','Max height, land soft and quiet, reset every rep.'),
+    E('aph','MX: attack-position wall sit, arms out like on the bars',3,up('60 s','90 s'),BW,'60 s','Thighs near parallel, elbows up, breathe.'),
+    E('slgb','Single-leg glute bridge',3,'12 each leg',up(BW,'Pause 2 s at the top'),'45 s','Drive through the heel, hips level.'),
+    E('calf','MX: single-leg calf raise off a step',3,up('15 each','25 each'),BW,'45 s','Full stretch at the bottom, 1 s pause at the top.'),
+    E('hlr','Hanging knee raise on the bar',3,up('10','12–15'),BW,'60 s','No swing. Knees to chest, lower slowly.')],
+  B:()=>[E('pull','Pull-up (or inverted row under a table)',4,up('Max minus 2','Max minus 1'),up(BW,'3 s lowering'),'2 min','Dead hang start, chin over the bar, control the way down.'),
+    E('irow','Inverted row under a sturdy table',3,up('12','15'),up(BW,'Feet raised on a chair'),'90 s','Body straight, pull your chest to the edge.'),
+    E('arow','MX: backpack row in attack position',3,'12 each arm',BP,'60 s','Hold attack position; row without twisting.'),
+    E('thang','Towel hang from the bar',3,'Max time',BW,'90 s','Grip a towel over the bar. Breathe, relax the forearms.'),
+    E('carry','Backpack or shopping-bag carry',4,'60 m','Heavy bags in each hand','60 s','Tall, shoulders down, relaxed grip.'),
+    E('neck','Neck, 4 directions with your hand as resistance',up(2,3),'15 s hold each way','Hand pressure','30 s','Push gently into your hand, don\'t let the head move.')],
+  C:()=>[E('broad','Broad jump',up(4,5),up('4','3'),BW,'90 s','First, while fresh. Swing the arms, stick the landing.'),
+    E('drop','MX: step-off landing into attack position',3,up('4','5'),up('Low step','Higher step'),'60 s','Step off, land and freeze 2 s in attack position.'),
+    E('lat','MX: skater bound and stick',3,up('5 each side','6 each side'),BW,'60 s','Jump sideways, stick on one leg for 2 s.'),
+    E('slrdl','Single-leg RDL reach',3,'10 each leg',up(BW,BP),'60 s','Hips square, reach long, slow.'),
+    E('nordic','Nordic curl, feet under the sofa',3,up('4','6'),BW,'90 s','Lower as slowly as you can, push back up with your hands.'),
+    E('cph','Copenhagen plank, top foot on a chair',3,up('20 s each side','30 s each side'),BW,'45 s','Hips high, straight line.')],
+  D:()=>[E('pu','Push-up',4,up('Max minus 3','Max minus 2'),up(BW,'Feet on a chair'),'90 s','Body in one line, chest to the floor.'),
+    E('pike','Pike push-up',3,up('8','10'),BW,'90 s','Hips high, head between the hands.'),
+    E('dips','MX: dips between two chairs',3,up('10–12','15'),BW,'75 s','Slight lean forward, full lockout.'),
+    p2&&E('burp','Burpee',4,'8',BW,'60 s','Chest to floor, jump at the top.'),
+    E('wring','Towel wring',3,'30 s',BW,'45 s','Wring a wet towel hard: the arm-pump muscles.'),
+    E('pts','Plank shoulder taps',3,'20',BW,'45 s','Hips still, no rocking.')],
+  A3:()=>[E('jsq','Jump squat',3,'4',BW,'90 s','Max height, soft landing.'),E('bss','Bulgarian split squat',2,'8 each leg',BP,'90 s','Controlled.'),E('aph','MX: attack-position wall sit',2,'60 s',BW,'60 s','Elbows up.'),E('hlr','Hanging knee raise',2,'10',BW,'60 s','No swing.')],
+  C3:()=>[E('broad','Broad jump',3,'3',BW,'90 s','Fresh and explosive.'),E('pull','Pull-up',3,'Max minus 2',BW,'2 min','Dead hang to chin over.'),E('irow','Inverted row',2,'10',BW,'90 s','Chest to the edge.'),E('cph','Copenhagen plank',2,'20 s each side',BW,'45 s','Straight line.')],
+  GN:()=>[E('thang','Towel hang from the bar',3,'Max time',BW,'60 s','Relaxed grip.'),E('wring','Towel wring',3,'30 s',BW,'45 s','Hard squeeze.'),E('neck','Neck, 4 directions',2,'15 s each way','Hand pressure','30 s','Slow and controlled.')],
+  FBA:()=>[E('bss','Bulgarian split squat',3,'10 each leg',BP,'90 s','Crisp reps.'),E('pull','Pull-up',3,'Max minus 2',BW,'2 min','Full range.'),E('pu','Push-up',3,'Max minus 3',BW,'90 s','Controlled.'),E('aph','MX: attack-position wall sit',2,'60 s',BW,'60 s','Elbows up.'),E('neck','Neck, 4 directions',2,'15 s each way','Hand pressure','30 s','Slow.')],
+  FBB:()=>[E('slrdl','Single-leg RDL reach',3,'10 each leg',BP,'60 s','Slow.'),E('pike','Pike push-up',3,'8',BW,'90 s','Hips high.'),E('irow','Inverted row',3,'12',BW,'90 s','Squeeze.'),E('lat','MX: skater bound and stick',3,'5 each side',BW,'60 s','Stick 2 s.'),E('thang','Towel hang',2,'Max time',BW,'60 s','Relaxed.')],
+  FBC:()=>[E('broad','Broad jump',3,'3',BW,'90 s','Explosive.'),E('bss','Bulgarian split squat',2,'8 each leg',BW,'90 s','Controlled.'),E('dips','MX: chair dips',2,'10',BW,'75 s','Full lockout.'),E('carry','Bag carry',3,'60 m','Heavy bags','60 s','Relaxed grip.')],
+  FBM:()=>[E('bss','Bulgarian split squat',3,'8 each leg',BW,'90 s','Easy, nothing to failure.'),E('pull','Pull-up',3,'5',BW,'90 s','Smooth.'),E('pu','Push-up',3,'10',BW,'60 s','Smooth.')],
+  PR:()=>[E('jsq','Jump squat',3,'3',BW,'90 s','Snappy, not tiring.'),E('pu','Push-up',2,'8',BW,'60 s','Fast reps.'),E('band','Arm circles and band pull-aparts',2,'15',BW,'45 s','Open the chest.')]
+  };
+  let list=(L[key]||L.A)().filter(Boolean);
+  if(m==='dl')list=list.map(x=>({...x,sets:Math.max(2,Math.round(x.sets*.6))}));
+  return list}
+function bwTest(which){
+  if(which==='row')return {id:'am',time:'05:30',title:'Test: 20-minute bike effort',code:'TEST',tier:'KEY',mins:40,steps:['Bike on a flat loop or the turbo: warm up 10 min easy, then 3 × 20 s hard','20 minutes at the hardest pace you can hold the whole way. Even effort, no sprint start','Log your average heart rate and distance','Log heart rate at the finish and 60 s later'],tests:[['bike20hr','20-min bike: average HR (bpm)'],['bike20km','20-min bike: distance (km)'],['hrdrop','HR drop after 60 s (bpm)']]};
+  if(which==='t1')return {id:'pm',time:'17:45',title:'Test: legs, core, grip, calves',code:'TEST',tier:'KEY',mins:45,warm:WARM(),steps:['Wall sit: one max hold, thighs parallel','Dead hang from the bar: one max hold','Side plank: max hold each side, log the weaker','Hanging knee raises: max strict reps','Single-leg calf raise off a step: max reps each leg, log the weaker'],tests:[['wallsit','Wall sit (s)'],['hang','Dead hang (s)'],['plank','Side plank, weaker side (s)'],['hlr','Hanging knee raises (reps)'],['calf','Calf raises, weaker leg (reps)']]};
+  if(which==='t2')return {id:'pm',time:'17:45',title:'Test: pull-ups, push-ups, burpees',code:'TEST',tier:'KEY',mins:40,warm:WARM(),steps:['Pull-ups: one max set, dead hang start, chin over the bar (no bar: max inverted rows)','Rest 5 min','Push-ups: max in 60 s, chest to the floor','Rest 5 min','Burpees: as many as you can in 3 minutes'],tests:[['pullmax','Pull-ups, one set (reps)'],['pushups','Push-ups in 60 s'],['burpees','Burpees in 3 min']]};
+}
+
+const BWCORE={
+  1:[E('c_hlr','Core: hollow hold',3,'30 s','Bodyweight','45 s','Low back pressed into the floor.'),E('c_db','Core: dead bug',3,'8 each side','Bodyweight','45 s','Slow, ribs down.')],
+  2:[E('c_suit','Core: one-hand bag carry',3,'30 m each side','Heavy bag or backpack','45 s','Stay tall, don\'t lean.'),E('c_bd','Core: bird dog',3,'8 each side','Bodyweight','45 s','Hips level, reach long.')],
+  3:[E('c_sp','Core: side plank',3,'Max minus 10 s each side','Bodyweight','45 s','Straight line, hips high.')],
+  4:[E('c_vu','Core: V-ups',3,'12','Bodyweight','45 s','Reach for your toes, lower slowly.'),E('c_hlr2','Core: hanging knee raise',3,'Max','Bodyweight','60 s','No swing.')]
+};
+function BWDIG(m){const o=DIGDEEP(m),p2=big(m);o.rows=o.rows.map(r=>r.id==='dd1'?{...r,label:'One round = 6 stations, about 4 min',detail:'1 Burpees × '+(p2?12:10)+' · 2 Jump squats × 15 · 3 Bag carry 2 × 20 m · 4 Lateral bounds × 10 · 5 Attack-position wall sit 30 s, arms out · 6 Push-ups × '+(p2?15:12)}:r.id==='dd5'?{...r,label:'Lap 1: bike or hill sprint, 2 min all-out',fields:[['hr','Max HR']]}:r.id==='dd6'?{...r,label:'Lap 2: bike or hill sprint, 2 min all-out',fields:[['hr','Max HR']]}:r.id==='dd7'?{...r,detail:r.detail.replace("Total rounds + both laps' cals",'Total rounds'),fields:[['tot','Total rounds']]}:r);return o}
