@@ -69,6 +69,7 @@ function gHR(d){if(!d.hrs||!d.hr5)return '<div class="tmc"><h3>Heart rate</h3><p
     +Z.map((z,i)=>'<div class="hrz"><span>'+(z[1]>300?z[0]+'+':z[0]?z[0]+'–'+z[1]:'under 110')+' bpm</span><i><b style="width:'+(cnt[i]/mx*100).toFixed(1)+'%;background:'+z[2]+'"></b></i><em>'+(cnt[i]<10?cnt[i].toFixed(1):Math.round(cnt[i]))+' min</em></div>').join('')+'</div>'}
 
 function gView(id,d){
+  if(d.polarId&&(d.v||1)<2&&typeof gRetime==='function')gRetime(id,d);
   if(!d.laps.some(l=>l.t5))return '<p class="empty">This session has no lap data.</p>';
   const {A,B,X}=gLapSel(d),best=d.laps[d.best],V=d.laps.filter(l=>l.valid),q=gq(d.hz),raw=S.graw&&S.graw.id===id,tr=S.tracks[d.trackId]||{};
   if(S.pbx&&S.pbx.id!==id){S.pb.t=0;S.pb.on=false}

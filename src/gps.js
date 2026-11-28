@@ -88,6 +88,33 @@ function cross(pts,g,w,gap){w=w||24;const dx=Math.cos(g.hd),dy=Math.sin(g.hd),nx
     const rx=B.x-A.x,ry=B.y-A.y;if(rx*dx+ry*dy<=0)continue;const den=rx*qy-ry*qx;if(Math.abs(den)<1e-9)continue;const ex=e1x-A.x,ey=e1y-A.y,u=(ex*qy-ey*qx)/den,s=(ex*ry-ey*rx)/den;
     if(u<0||u>1||s<0||s>1)continue;const t=A.t+u*(B.t-A.t);if(out.length&&t-out[out.length-1].t<gap)continue;out.push({t,i,u})}
   return out}
+/* GPS on a watch drifts 5-15 m, so a fixed 24 m line placed a few metres off the racing line misses laps.
+   fitGate: move the line to where you actually cross it, then make it as wide as the track allows
+   without picking up another part of the track (that would show up as laps that are far too short). */
+function xpt(pts,z){const A=pts[z.i-1],B=pts[z.i];return {x:A.x+(B.x-A.x)*z.u,y:A.y+(B.y-A.y)*z.u}}
+function shortN(c,m){let n=0;for(let k=1;k<c.length;k++)if(c[k].t-c[k-1].t<m*0.6)n++;return n}
+function fitGate(pts,g,gap){let c=cross(pts,g,24,gap);if(c.length<3)return g;
+  const nx=-Math.sin(g.hd),ny=Math.cos(g.hd),off=med(c.map(z=>{const p=xpt(pts,z);return (p.x-g.x)*nx+(p.y-g.y)*ny}));
+  const g2={x:g.x+nx*off,y:g.y+ny*off,hd:g.hd};const c2=cross(pts,g2,24,gap),base=c2.length>=c.length?c2:c,b=c2.length>=c.length?g2:g;
+  const m=med(base.slice(1).map((z,k)=>z.t-base[k].t)),s0=shortN(base,m);
+  for(const w of [60,48,36]){const cw=cross(pts,b,w,gap);if(cw.length>=base.length&&shortN(cw,m)<=s0)return {...b,w}}
+  return {...b,w:24}}
+/* a lap that is 2, 3, 4… times the normal time is missed crossings, not a slow lap: find where each missing crossing happened */
+function fillMissed(pts,g,c){if(c.length<3)return c;const ints=[];for(let k=1;k<c.length;k++)ints.push(c[k].t-c[k-1].t);const m=med(ints.filter(x=>x>=20));if(!(m>0))return c;
+  const dl=med(c.slice(1).map((z,k)=>pts[z.i].d-pts[c[k].i].d).filter((x,k)=>Math.abs(ints[k]-m)<m*0.2));if(!(dl>0))return c;
+  const dx=Math.cos(g.hd),dy=Math.sin(g.hd),nx=-dy,ny=dx,out=[c[0]];
+  for(let k=1;k<c.length;k++){const a=c[k-1],b=c[k],r=(b.t-a.t)/m,n=Math.round(r);
+    let brk=false;for(let i=a.i+1;i<=b.i;i++)if(pts[i].brk){brk=true;break}
+    if(!brk&&n>=2&&n<=8&&Math.abs(r-n)<0.3){let prev=a;
+      for(let j=1;j<n;j++){const want=pts[a.i].d+j*dl;let best=null;
+        for(let i=prev.i+1;i<b.i;i++){const A=pts[i-1],B=pts[i];if(B.brk)continue;if(Math.abs(B.d-want)>dl*0.3)continue;
+          const fa=(A.x-g.x)*dx+(A.y-g.y)*dy,fb=(B.x-g.x)*dx+(B.y-g.y)*dy;if(!(fa<0&&fb>=0))continue;
+          const u=fa/(fa-fb),lat=Math.abs((A.x+(B.x-A.x)*u-g.x)*nx+(A.y+(B.y-A.y)*u-g.y)*ny);if(lat>45)continue;
+          const sc=Math.abs(B.d-want)+lat*2;if(!best||sc<best.sc)best={t:A.t+u*(B.t-A.t),i,u,sc,fill:true}}
+        if(best&&best.t-prev.t>m*0.6&&b.t-best.t>m*0.6){out.push(best);prev=best}}}
+    out.push(b)}
+  return out}
+const crossW=(pts,g,gap)=>cross(pts,g,g.w||24,gap);
 function mkLaps(pts,c){const L=[];for(let k=1;k<c.length;k++){const a=c[k-1],b=c[k];let brk=false;for(let i=a.i+1;i<=b.i;i++)if(pts[i].brk){brk=true;break}L.push({t0:a.t,t1:b.t,i0:a.i,i1:b.i,u0:a.u,u1:b.u,time:b.t-a.t,brk})}
   const m=med(L.filter(l=>!l.brk&&l.time>=20).map(l=>l.time));L.forEach(l=>l.valid=!l.brk&&l.time>=20&&m>0&&l.time<=m*1.35&&l.time>=m*0.7);return L}
 function autoSF(pts){const n=pts.length,a=Math.floor(n*0.2),b=Math.floor(n*0.8),step=Math.max(1,Math.floor((b-a)/180));let best=null;
@@ -119,15 +146,15 @@ function corners(v,ds){const n=v.length,w=Math.round(15/ds),win=Math.round(120/d
 
 /* ----- full analysis -> storable summary ----- */
 function run(P,gates){const {pts,o}=P;let sf=gates&&gates.sf?fromLL(o,gates.sf):null,auto=false;
-  if(sf){const c=cross(pts,sf,24,15);if(mkLaps(pts,c).filter(l=>l.valid).length<2)sf=null}
-  if(!sf){sf=autoSF(pts);auto=true}
+  if(sf){sf=fitGate(pts,sf,15);const c=crossW(pts,sf,15);if(mkLaps(pts,c).filter(l=>l.valid).length<2)sf=null}
+  if(!sf){sf=autoSF(pts);auto=true;if(sf)sf=fitGate(pts,sf,15)}
   if(!sf)throw new Error('Could not find repeated laps. Check the file is from a track session, or tap the finish line on the map.');
-  const L=mkLaps(pts,cross(pts,sf,24,15)),V=L.filter(l=>l.valid);if(!V.length)throw new Error('No complete laps found.');
+  const L=mkLaps(pts,fillMissed(pts,sf,crossW(pts,sf,15))),V=L.filter(l=>l.valid);if(!V.length)throw new Error('No complete laps found.');
   const refL=V.reduce((a,b)=>b.time<a.time?b:a);
   let sp=gates&&gates.sp&&gates.sp.length===3&&!auto?gates.sp.map(g=>fromLL(o,g)):autoSplits(pts,refL);
-  const sc=sp.map(g=>cross(pts,g,24,5));
+  sp=sp.map(g=>fitGate(pts,g,5));const sc=sp.map(g=>crossW(pts,g,5));
   L.forEach(l=>{if(!l.valid)return;const s=[];let prev=l.t0;for(const c of sc){const x=c.find(z=>z.t>prev+1&&z.t<l.t1-1);if(!x){l.sec=null;return}s.push(x.t);prev=x.t}l.sec=[s[0]-l.t0,s[1]-s[0],s[2]-s[1],l.t1-s[2]]});
-  if(V.filter(l=>l.sec).length<Math.ceil(V.length/2)&&!auto&&gates&&gates.sp){sp=autoSplits(pts,refL);const sc2=sp.map(g=>cross(pts,g,24,5));L.forEach(l=>{if(!l.valid)return;const s=[];let prev=l.t0;for(const c of sc2){const x=c.find(z=>z.t>prev+1&&z.t<l.t1-1);if(!x){l.sec=null;return}s.push(x.t);prev=x.t}l.sec=[s[0]-l.t0,s[1]-s[0],s[2]-s[1],l.t1-s[2]]})}
+  if(V.filter(l=>l.sec).length<Math.ceil(V.length/2)&&!auto&&gates&&gates.sp){sp=autoSplits(pts,refL).map(g=>fitGate(pts,g,5));const sc2=sp.map(g=>crossW(pts,g,5));L.forEach(l=>{if(!l.valid)return;const s=[];let prev=l.t0;for(const c of sc2){const x=c.find(z=>z.t>prev+1&&z.t<l.t1-1);if(!x){l.sec=null;return}s.push(x.t);prev=x.t}l.sec=[s[0]-l.t0,s[1]-s[0],s[2]-s[1],l.t1-s[2]]})}
   const ds=2,ref=grid(lapPts(pts,refL),ds),D=ref.D,sig=Math.max(3,o.spacing*0.5)/ds;
   const prof=new Map();
   V.forEach(l=>{const lp=lapPts(pts,l),m=l===refL?{s:lp.map(p=>Math.min(D,p.s)),res:0}:mapTo(ref,lp);if(m.res>20)return;
@@ -150,7 +177,7 @@ function run(P,gates){const {pts,o}=P;let sf=gates&&gates.sf?fromLL(o,gates.sf):
   const ll=[];for(let k=0;k<=N5;k++){const g=toLL(o,{x:at(ref.x,k*G5,ds),y:at(ref.y,k*G5,ds),hd:0});ll.push([g.lat,g.lon])}
   const S=laps.filter(l=>l.sec),aSec=S.length?[0,1,2,3].map(k=>Math.min(...S.map(l=>l.sec[k]))):null,C=laps.filter(l=>l.cm);
   const aCor=C.length&&cs.length?cs.map((_,j)=>Math.min(...C.map(l=>l.cm[j][6]))):null;
-  return {v:1,hz:o.hz,dur:Math.round(o.dur),hasHr:o.hasHr,len:Math.round(D),best:L.indexOf(refL),laps,aSec,aLap:aSec?r2(aSec.reduce((a,b)=>a+b,0)):null,
+  return {v:2,hz:o.hz,dur:Math.round(o.dur),hasHr:o.hasHr,len:Math.round(D),best:L.indexOf(refL),laps,aSec,aLap:aSec?r2(aSec.reduce((a,b)=>a+b,0)):null,
     aCor,aCorLap:aCor?r2(aCor.reduce((a,b)=>a+b,0)):null,corners:cs.map(s=>Math.round(s)),bounds:bounds.map(s=>Math.round(s)),g5:G5,ll,auto,
     gates:{sf:toLL(o,sf),sp:sp.map(g=>toLL(o,g))},secS:secS.map(Math.round),hr5,hrs,dist:Math.round(pts[pts.length-1].d),t0:Math.round(o.t0)}}
 function moveGate(P,gates,which,lat,lon){const {pts,o}=P,g=fromLL(o,{lat,lon,hd:0}),i=nearest(pts,g.x,g.y),ng=toLL(o,gateAt(pts,i));

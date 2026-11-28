@@ -38,7 +38,7 @@ function gImportData(name,data,date,extra){let tid=$('#g-trk')?$('#g-trk').value
   if(tid&&S.tracks[tid])tname=S.tracks[tid].name;else{tname=$('#g-name')?$('#g-name').value.trim():'';if(!tname)throw new Error('Pick the track, or type its name, in Import a session first.');tid=slug(tname);if(!S.tracks[tid]){S.tracks[tid]={name:tname,ground:'mixed',setup:{}};save('tracks/'+tid,true)}}
   const P=G.prep(G.parse(name,data)),r=G.run(P,S.tracks[tid].timing||null),id=date+'-'+Math.random().toString(36).slice(2,7);
   const doc={date,trackId:tid,track:tname,file:name.slice(0,60),created:new Date().toISOString(),...r,...(extra||{})};if(ses)doc.ses=ses;
-  S.gpsx[id]=doc;save('gps/'+id,true);const tr=S.tracks[tid];let c=false;if(!tr.timing||r.auto){tr.timing=r.gates;c=true}
+  S.gpsx[id]=doc;save('gps/'+id,true);const tr=S.tracks[tid];let c=false;if(!tr.timing||r.auto||JSON.stringify(tr.timing)!==JSON.stringify(r.gates)){tr.timing=r.gates;c=true}
   if(!tr.geo&&r.ll&&r.ll.length){let a=0,b=0;r.ll.forEach(p=>{a+=p[0];b+=p[1]});tr.geo={lat:+(a/r.ll.length).toFixed(6),lon:+(b/r.ll.length).toFixed(6)};c=true}if(c)save('tracks/'+tid,true);
   S.gtrk=tid;S.graw={id,P};S.gsel=id;S.glap=null;S.gb=null;S.gmode=null;S.gnote='';S.pb.t=0;S.pb.on=false;return id}
 document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('#pcon,#plist,#pdis,#pstat,[data-pimp],#tgeoGo,[data-geo],#signout');if(!t)return;
@@ -56,3 +56,11 @@ document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.c
 (()=>{try{const q=new URLSearchParams(location.search),p=q.get('polar');if(p){S.sub='gps';S.polar=null;S.polarMsgOnce=p==='ok'?'Polar connected. Sync your watch, then tap Check for new sessions.':'Polar connection didn\'t finish ('+p+'). Try Connect again.';history.replaceState(null,'',location.pathname+'#track')}}catch(e){}})();
 document.addEventListener('input',e=>{const t=e.target;if(!t)return;if(t.id==='g-name')S.gname=t.value;else if(t.id==='g-ses')S.gses=t.value;else if(t.id==='g-date')S.gdate=t.value});
 document.addEventListener('change',e=>{const t=e.target;if(t&&t.id==='g-trk')S.gtrk=t.value||null});
+
+/* sessions timed by the old lap finder: fetch the ride again from Polar and re-time it once */
+function gRetime(id,d){S.gfix=S.gfix||{};if(S.gfix[id])return;S.gfix[id]=1;S.gnote='Re-timing this session with the improved lap finder…';
+  (async()=>{try{const r=await pf({action:'file',id:d.polarId}),bin=atob(r.fit),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    const P=G.prep(G.parse('polar.fit',u.buffer)),before=d.laps.filter(l=>l.valid).length,x=G.run(P,d.gates||(S.tracks[d.trackId]||{}).timing||null);
+    Object.assign(d,x);S.gpsx[id]=d;save('gps/'+id,true);S.graw={id,P};S.glap=null;S.gb=null;const after=x.laps.filter(l=>l.valid).length;
+    S.gnote=after>before?'Re-timed: found '+(after-before)+' more lap'+(after-before>1?'s':'')+' that the old version missed.':''}
+   catch(e){S.gnote='';d.v=2}render()})()}
