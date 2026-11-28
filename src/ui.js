@@ -293,6 +293,7 @@ function render(){
   if(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('#app input:not([type=checkbox]),#app textarea')){S.dirty=true;return}
   S.dirty=false;document.documentElement.dataset.skin='lab';
   applyCfg(S.prof&&S.prof.cfg);
+  if(needsAgree()){$('#board').innerHTML='';$('#app').innerHTML=renderAgree();return}
   if(needsOnboard()){$('#board').innerHTML='';$('#app').innerHTML=renderOnboard();return}
   const openIds=[...document.querySelectorAll('details.item[open]')].map(d=>d.id),closedIds=[...document.querySelectorAll('details.item:not([open])')].map(d=>d.id);
   renderBoard();

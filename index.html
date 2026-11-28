@@ -2,7 +2,7 @@
 <html lang="en-GB" data-skin="lab">
 <head>
 <meta charset="utf-8">
-<script>window.MXBUILD='20261128165211'</script>
+<script>window.MXBUILD='20261128170228'</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>MX HQ</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -339,6 +339,7 @@ html[data-skin] .tabs a.on{box-shadow:none}
 .obseg button.on{border-color:var(--acc)!important;background:rgba(255,77,28,.12)!important}
 .obseg.chips{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.obseg.chips button{padding:12px}.obseg.chips button b{font-size:14px}
 .injb{border-left:4px solid var(--amb)!important}
+.obagree{display:flex!important;gap:12px;align-items:center;width:100%;text-align:left;background:var(--s1)!important;color:var(--ink)!important;border:1px solid var(--line)!important;padding:14px!important;margin:16px 0 4px;text-transform:none!important;letter-spacing:0!important;font-weight:600}.obagree i{flex:0 0 24px;height:24px;border:2px solid var(--mut);display:grid;place-items:center;font-style:normal;color:#fff}.obagree.on{border-color:var(--acc)!important}.obagree.on i{background:var(--acc);border-color:var(--acc)}
 .feel{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.feel button{display:block;background:var(--s1)!important;color:var(--ink)!important;border:1px solid var(--line)!important;padding:10px 2px;text-align:center}.feel button b{display:block;font-size:20px}.feel button span{display:block;font-size:11px;color:var(--mut);font-weight:500}.feel button.on{border-color:var(--acc)!important;background:rgba(255,77,28,.14)!important}
 .obnav{display:flex;justify-content:space-between;gap:10px;margin-top:22px}.obnav button{min-width:120px}
 .oberr{color:var(--amb);font-weight:600;margin:14px 0 0}
@@ -1518,6 +1519,24 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
     const cfg=obCfg();S.prof.cfg=cfg;S.prof.name=cfg.name;if(a.maxHR!=='')S.prof.maxHR=+a.maxHR;else if(!S.prof.maxHR)S.prof.maxHR=Math.round(208-0.7*cfg.age);
     save('profile/main',true);S.ob=null;S.obEdit=false;applyCfg(cfg);S.date=todayS();location.hash='today';render();window.scrollTo(0,0)}
 });
+/* ---------- one-time agreement before a new rider starts ---------- */
+const needsAgree=()=>!!(window.MXSB&&S.db&&S.profReady&&!(S.prof&&S.prof.legacy)&&!(S.prof&&S.prof.agreed));
+function renderAgree(){const ok=!!S.agreeTick;
+  return '<div class="ob"><div class="obh"><span class="lab">BEFORE YOU START</span><h1>Read this first</h1></div><ul class="steps" style="line-height:1.5">'
+   +'<li><b>This is a training tool, not medical advice.</b> The people who made it aren\'t doctors or physios.</li>'
+   +'<li><b>Check with a GP first</b> if you have a heart condition, high blood pressure, asthma, diabetes, a past injury that still bothers you, or anything else that could make hard exercise risky.</li>'
+   +'<li><b>Stop straight away</b> and get help if you get chest pain, feel faint or dizzy, or are unusually short of breath.</li>'
+   +'<li><b>Injury mode doesn\'t diagnose anything.</b> It works around an injury. A physio or doctor decides when you\'re ready to move on. Any head injury: see a doctor.</li>'
+   +'<li><b>Food targets are a starting point</b>, not a diet for a medical condition. With food allergies or an eating disorder, get advice from a dietitian or your GP.</li>'
+   +'<li><b>Motocross is dangerous.</b> You ride and train at your own risk.</li>'
+   +'<li><b>Your data</b> (training, sleep, weight, recovery, lap times) is stored in the app\'s secure database. Kayden, who runs the app, can see it to fix problems. It\'s never sold or shared. Ask him to delete it at any time.</li>'
+   +'<li>You must be <b>18 or over</b> to use the app.</li></ul>'
+   +'<button type="button" class="obagree'+(ok?' on':'')+'" id="agreeTick" role="checkbox" aria-checked="'+ok+'"><i>'+(ok?'✓':'')+'</i><span>I\'m 18 or over, I\'ve read this and I agree</span></button>'
+   +'<div class="obnav"><button type="button" class="ghost" id="agreeOut">Sign out</button><button type="button" id="agreeGo"'+(ok?'':' disabled')+'>Continue</button></div></div>'}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#agreeTick,#agreeGo,#agreeOut');if(!t)return;
+  if(t.id==='agreeTick'){S.agreeTick=!S.agreeTick;render();return}
+  if(t.id==='agreeOut'){window.MXsignOut&&window.MXsignOut();return}
+  if(t.id==='agreeGo'&&S.agreeTick){S.prof=S.prof||{};S.prof.agreed=new Date().toISOString();save('profile/main',true);render();window.scrollTo(0,0)}});
 
 /* ---------- weekly review: built in the app from what's been logged, no chat needed ---------- */
 function weekReview(){
@@ -1872,6 +1891,7 @@ function render(){
   if(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('#app input:not([type=checkbox]),#app textarea')){S.dirty=true;return}
   S.dirty=false;document.documentElement.dataset.skin='lab';
   applyCfg(S.prof&&S.prof.cfg);
+  if(needsAgree()){$('#board').innerHTML='';$('#app').innerHTML=renderAgree();return}
   if(needsOnboard()){$('#board').innerHTML='';$('#app').innerHTML=renderOnboard();return}
   const openIds=[...document.querySelectorAll('details.item[open]')].map(d=>d.id),closedIds=[...document.querySelectorAll('details.item:not([open])')].map(d=>d.id);
   renderBoard();

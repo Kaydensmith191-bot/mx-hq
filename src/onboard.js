@@ -47,3 +47,21 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
     const cfg=obCfg();S.prof.cfg=cfg;S.prof.name=cfg.name;if(a.maxHR!=='')S.prof.maxHR=+a.maxHR;else if(!S.prof.maxHR)S.prof.maxHR=Math.round(208-0.7*cfg.age);
     save('profile/main',true);S.ob=null;S.obEdit=false;applyCfg(cfg);S.date=todayS();location.hash='today';render();window.scrollTo(0,0)}
 });
+/* ---------- one-time agreement before a new rider starts ---------- */
+const needsAgree=()=>!!(window.MXSB&&S.db&&S.profReady&&!(S.prof&&S.prof.legacy)&&!(S.prof&&S.prof.agreed));
+function renderAgree(){const ok=!!S.agreeTick;
+  return '<div class="ob"><div class="obh"><span class="lab">BEFORE YOU START</span><h1>Read this first</h1></div><ul class="steps" style="line-height:1.5">'
+   +'<li><b>This is a training tool, not medical advice.</b> The people who made it aren\'t doctors or physios.</li>'
+   +'<li><b>Check with a GP first</b> if you have a heart condition, high blood pressure, asthma, diabetes, a past injury that still bothers you, or anything else that could make hard exercise risky.</li>'
+   +'<li><b>Stop straight away</b> and get help if you get chest pain, feel faint or dizzy, or are unusually short of breath.</li>'
+   +'<li><b>Injury mode doesn\'t diagnose anything.</b> It works around an injury. A physio or doctor decides when you\'re ready to move on. Any head injury: see a doctor.</li>'
+   +'<li><b>Food targets are a starting point</b>, not a diet for a medical condition. With food allergies or an eating disorder, get advice from a dietitian or your GP.</li>'
+   +'<li><b>Motocross is dangerous.</b> You ride and train at your own risk.</li>'
+   +'<li><b>Your data</b> (training, sleep, weight, recovery, lap times) is stored in the app\'s secure database. Kayden, who runs the app, can see it to fix problems. It\'s never sold or shared. Ask him to delete it at any time.</li>'
+   +'<li>You must be <b>18 or over</b> to use the app.</li></ul>'
+   +'<button type="button" class="obagree'+(ok?' on':'')+'" id="agreeTick" role="checkbox" aria-checked="'+ok+'"><i>'+(ok?'✓':'')+'</i><span>I\'m 18 or over, I\'ve read this and I agree</span></button>'
+   +'<div class="obnav"><button type="button" class="ghost" id="agreeOut">Sign out</button><button type="button" id="agreeGo"'+(ok?'':' disabled')+'>Continue</button></div></div>'}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#agreeTick,#agreeGo,#agreeOut');if(!t)return;
+  if(t.id==='agreeTick'){S.agreeTick=!S.agreeTick;render();return}
+  if(t.id==='agreeOut'){window.MXsignOut&&window.MXsignOut();return}
+  if(t.id==='agreeGo'&&S.agreeTick){S.prof=S.prof||{};S.prof.agreed=new Date().toISOString();save('profile/main',true);render();window.scrollTo(0,0)}});
