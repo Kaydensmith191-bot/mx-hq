@@ -64,3 +64,17 @@ function gRetime(id,d){S.gfix=S.gfix||{};if(S.gfix[id])return;S.gfix[id]=1;S.gno
     Object.assign(d,x);S.gpsx[id]=d;save('gps/'+id,true);S.graw={id,P};S.glap=null;S.gb=null;const after=x.laps.filter(l=>l.valid).length;
     S.gnote=after>before?'Re-timed: found '+(after-before)+' more lap'+(after-before>1?'s':'')+' that the old version missed.':''}
    catch(e){S.gnote='';d.v=2}render()})()}
+
+/* app updates: spot a new version and offer a one-tap update, so nobody has to close and reopen the app */
+const mxVer=()=>{const b=String(window.MXBUILD||'');return /^\d{14}$/.test(b)?+b.slice(6,8)+' '+MN[+b.slice(4,6)-1]+' '+b.slice(8,10)+':'+b.slice(10,12):'dev'};
+async function mxCheck(manual){if(!/^\d{14}$/.test(String(window.MXBUILD||'')))return false;
+  try{const r=await fetch('version.txt?'+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;const v=(await r.text()).trim();
+    if(/^\d{14}$/.test(v)&&v>window.MXBUILD){S.updReady=true;mxBanner();if(manual)render();return true}
+    if(manual){S.updMsg='You\'re on the latest version';render()}}catch(_){if(manual){S.updMsg='Couldn\'t check: are you online?';render()}}return false}
+async function mxUpdate(){try{const g=await navigator.serviceWorker?.getRegistration();if(g)await g.update()}catch(_){}try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k!=='mxhq-tiles').map(k=>caches.delete(k)))}catch(_){}location.reload()}
+function mxBanner(){if(document.getElementById('mxupdb'))return;const b=document.createElement('button');b.id='mxupdb';b.type='button';
+  b.textContent='New version ready · Tap to update';b.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:9999;background:#ff5a1f;color:#fff;border:0;padding:12px 18px;font:600 14px/1.2 "Chakra Petch",system-ui,sans-serif;letter-spacing:.02em;box-shadow:0 6px 24px rgba(0,0,0,.5);width:auto';
+  b.onclick=mxUpdate;document.body.appendChild(b)}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#mxupd');if(!t)return;if(S.updReady)mxUpdate();else{S.updMsg='Checking…';render();mxCheck(true)}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')mxCheck()});
+setTimeout(()=>mxCheck(),4000);setInterval(()=>mxCheck(),15*60*1000);
