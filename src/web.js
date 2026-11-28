@@ -78,3 +78,29 @@ function mxBanner(){if(document.getElementById('mxupdb'))return;const b=document
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#mxupd');if(!t)return;if(S.updReady)mxUpdate();else{S.updMsg='Checking…';render();mxCheck(true)}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')mxCheck()});
 setTimeout(()=>mxCheck(),4000);setInterval(()=>mxCheck(),15*60*1000);
+
+/* ---------- WHOOP: connect once, then recovery / HRV / resting HR / sleep / strain fill in by themselves ---------- */
+async function wf(body){const {data,error}=await window.MXSB.functions.invoke('whoop',{body});if(error){let m=error.message;try{const j=await error.context.json();m=j.error||m}catch(_){}throw new Error(m)}return data}
+const WMSG={whoop_keys_missing:'WHOOP keys aren\'t added yet. See the setup steps Claude gave you.',not_connected:'WHOOP isn\'t connected yet.',whoop_auth:'WHOOP access ended. Tap Connect WHOOP again.',not_signed_in:'Sign in again.'};
+const wLS={get:k=>{try{return localStorage.getItem('mxw:'+k)}catch(_){return null}},set:(k,v)=>{try{localStorage.setItem('mxw:'+k,v)}catch(_){}}};
+const agoTxt=t=>{if(!t)return 'never';const m=Math.round((Date.now()-new Date(t).getTime())/60000);return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'};
+async function whoopStatus(){S.whoop={loading:true};try{const r=await wf({action:'status'});S.whoop={connected:r.connected,keys:r.keys,last:r.last,msg:S.whoopMsgOnce||''};S.whoopMsgOnce='';wLS.set('on',r.connected?'1':'0')}catch(e){S.whoop={err:WMSG[e.message]||'Could not reach WHOOP: '+e.message}}render()}
+async function whoopSync(manual,days){if(!window.MXSB)return;const w=S.whoop||(S.whoop={});if(w.busy)return;w.busy=true;if(manual)w.msg='';if(manual)render();
+  try{const r=await wf({action:'sync',days:days||7});w.last=new Date().toISOString();wLS.set('last',String(Date.now()));if(manual)w.msg=r.days?'Synced: latest is '+nice(r.latest)+(r.today&&r.today.rec!=null?' · recovery '+r.today.rec+'%':'')+'.':'Nothing new from WHOOP yet. Has your strap synced to the WHOOP app?'}
+  catch(e){if(e.message==='whoop_auth'||e.message==='not_connected'){w.connected=false;wLS.set('on','0')}if(manual||e.message==='whoop_auth')w.msg=WMSG[e.message]||'Could not sync: '+e.message}
+  w.busy=false;render()}
+/* automatic: when the app opens or comes back to the front, at most every 20 minutes */
+function whoopAuto(){if(!window.MXSB||wLS.get('on')!=='1')return;const last=+wLS.get('last')||0;if(Date.now()-last<20*60*1000)return;whoopSync(false,3)}
+setTimeout(whoopAuto,2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')whoopAuto()});
+function whoopCard(){if(!window.MXSB)return '';if(!S.whoop){setTimeout(whoopStatus,0);S.whoop={loading:true}}const w=S.whoop;let b='';
+  if(w.loading)b='<p class="mut">Checking WHOOP…</p>';else if(w.err)b='<p style="color:var(--red);font-weight:600">'+esc(w.err)+'</p><button class="ghost" id="wstat">Try again</button>';
+  else if(!w.keys)b='<p class="mut" style="margin-top:0">Waiting on the WHOOP developer keys. Once they\'re added, a Connect button appears here.</p><button class="ghost" id="wstat">Check again</button>';
+  else if(!w.connected)b='<p class="mut" style="margin-top:0">Link WHOOP once. After that, recovery, HRV, resting HR, sleep and strain fill in on their own every morning, and your sessions adjust to them.</p><button id="wcon">Connect WHOOP</button>';
+  else b='<p class="mut" style="margin-top:0">Connected. Recovery, HRV, resting HR, sleep and yesterday\'s strain fill in on their own when you open the app. Last synced: <b>'+esc(agoTxt(w.last))+'</b>.</p><div class="row2"><button id="wsync">'+(w.busy?'Syncing…':'Sync now')+'</button><button class="ghost" id="wdis">'+(S.wdis?'Tap again to disconnect':'Disconnect')+'</button></div>';
+  return '<div class="card" style="max-width:760px"><span class="lab">WHOOP · AUTOMATIC</span>'+b+(w.msg?'<p style="color:var(--amb);font-weight:600">'+esc(w.msg)+'</p>':'')+'</div>'}
+document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('#wcon,#wsync,#wdis,#wstat');if(!t)return;
+  if(t.id==='wstat'){whoopStatus();return}
+  if(t.id==='wsync'){whoopSync(true,14);return}
+  if(t.id==='wdis'){if(!S.wdis){S.wdis=true;render();return}S.wdis=false;try{await wf({action:'disconnect'})}catch(_){}wLS.set('on','0');S.whoop=null;render();return}
+  if(t.id==='wcon'){t.disabled=true;try{const r=await wf({action:'start',returnUrl:location.href.split('#')[0].split('?')[0]});location.href=r.url}catch(err){S.whoop.msg=WMSG[err.message]||err.message;t.disabled=false;render()}return}});
+(()=>{try{const q=new URLSearchParams(location.search),p=q.get('whoop');if(p){S.ssub='profile';S.whoop=null;S.whoopMsgOnce=p==='ok'?'WHOOP connected. Your last 30 days are in.':'WHOOP connection didn\'t finish ('+p+'). Try Connect WHOOP again.';if(p==='ok'){wLS.set('on','1');wLS.set('last',String(Date.now()))}history.replaceState(null,'',location.pathname+'#stats')}}catch(e){}})();
