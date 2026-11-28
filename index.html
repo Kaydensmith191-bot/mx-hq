@@ -2,7 +2,7 @@
 <html lang="en-GB" data-skin="lab">
 <head>
 <meta charset="utf-8">
-<script>window.MXBUILD='20261128155514'</script>
+<script>window.MXBUILD='20261128165211'</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>MX HQ</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -337,6 +337,9 @@ html[data-skin] .tabs a.on{box-shadow:none}
 .obseg{display:grid;gap:8px;margin:8px 0}.obseg button{display:block;text-align:left;background:var(--s1)!important;color:var(--ink)!important;border:1px solid var(--line)!important;padding:14px 16px;text-transform:none;letter-spacing:0}
 .obseg button b{display:block;font-size:16px}.obseg button span{display:block;font-weight:400;color:var(--mut);font-size:13px;margin-top:2px}
 .obseg button.on{border-color:var(--acc)!important;background:rgba(255,77,28,.12)!important}
+.obseg.chips{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.obseg.chips button{padding:12px}.obseg.chips button b{font-size:14px}
+.injb{border-left:4px solid var(--amb)!important}
+.feel{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.feel button{display:block;background:var(--s1)!important;color:var(--ink)!important;border:1px solid var(--line)!important;padding:10px 2px;text-align:center}.feel button b{display:block;font-size:20px}.feel button span{display:block;font-size:11px;color:var(--mut);font-weight:500}.feel button.on{border-color:var(--acc)!important;background:rgba(255,77,28,.14)!important}
 .obnav{display:flex;justify-content:space-between;gap:10px;margin-top:22px}.obnav button{min-width:120px}
 .oberr{color:var(--amb);font-weight:600;margin:14px 0 0}
 .obsum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}.obsum div{background:var(--s1);border:1px solid var(--line);padding:10px 12px}.obsum span{display:block;font-size:12px;color:var(--mut)}.obsum b{font-size:17px}
@@ -570,7 +573,7 @@ const EQ={bike:['Wattbike or spin bike','85–95 rpm, seated'],air:['Air bike (A
 const equip=(k,w)=>isBW()?(k==='circ'?'bwcirc':k==='long'?'road':'bwbike'):({z2:w===3?'tread':'bike',ap:'air',thr:'row',sim:'air',sim3:'air',short:'air',circ:'mixed',long:'road',recov:'bike'}[k]||null);
 function plan(s){let r=plan0(s);const w=dow(s);if(isBW()&&r.title)r={...r,title:r.title.replace(/Strength/g,'Bodyweight').replace(/heavy /g,'sharp ').replace(/Zone 2 \+/,'Zone 2 ride +')};
   if(CFG&&+CFG.daily===1&&w<=4&&r.am&&r.pm&&r.c.mode!=='test'){r=(w===2||w===4)?{...r,am:null,pm:r.am,title:r.am.title||r.title}:{...r,am:null}}
-  for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};return r}
+  for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};if(typeof injDay==='function')r=injDay(r,s);return r}
 function plan0(s){
   const c=ctx(s),w=c.w,m=c.mode,wk=c.wk;
   const P=(o)=>({c,am:null,pm:null,track:null,type:'gym',...o});
@@ -674,7 +677,7 @@ function lastFor(id,before){
   return null;
 }
 function verdict(day,prevDay){
-  const r=+getK(day,'whoop.rec');if(!(r>0))return ['n','Log your Whoop recovery to get today\'s call.'];
+  const r=+getK(day,'whoop.rec');if(!(r>0))return ['n','Do your morning check-in to get today\'s call.'];
   const pr=+getK(prevDay||{},'whoop.rec');
   if(r<34&&pr>0&&pr<34)return ['r','Red two days running: take today off, eat 300 kcal more and get an extra hour of sleep.'];
   if(r<34)return ['r','Red ('+r+'%): swap the hard session for Zone 2 or mobility.'];
@@ -748,6 +751,166 @@ const BWCORE={
   4:[E('c_vu','Core: V-ups',3,'12','Bodyweight','45 s','Reach for your toes, lower slowly.'),E('c_hlr2','Core: hanging knee raise',3,'Max','Bodyweight','60 s','No swing.')]
 };
 function BWDIG(m){const o=DIGDEEP(m),p2=big(m);o.rows=o.rows.map(r=>r.id==='dd1'?{...r,label:'One round = 6 stations, about 4 min',detail:'1 Burpees × '+(p2?12:10)+' · 2 Jump squats × 15 · 3 Bag carry 2 × 20 m · 4 Lateral bounds × 10 · 5 Attack-position wall sit 30 s, arms out · 6 Push-ups × '+(p2?15:12)}:r.id==='dd5'?{...r,label:'Lap 1: bike or hill sprint, 2 min all-out',fields:[['hr','Max HR']]}:r.id==='dd6'?{...r,label:'Lap 2: bike or hill sprint, 2 min all-out',fields:[['hr','Max HR']]}:r.id==='dd7'?{...r,detail:r.detail.replace("Total rounds + both laps' cals",'Total rounds'),fields:[['tot','Total rounds']]}:r);return o}
+
+/* ---------- injury mode: tell the app what's hurt, the plan works around it in stages ---------- */
+const INJ_AREAS=[['shoulder','Shoulder'],['collarbone','Collarbone'],['arm','Elbow, wrist or hand'],['back','Back'],['ribs','Ribs'],['hip','Hip or groin'],['knee','Knee'],['ankle','Ankle or foot'],['head','Concussion']];
+const INJ_NAME=Object.fromEntries(INJ_AREAS);
+const INJ_STAGES=['Protect','Rebuild','Return'];
+const CONC_STAGES=['Rest','Light activity','Steady cardio','Gym and harder cardio','Riding practice','Racing'];
+const CONC_DAY=[0,1,3,7,14,20]; // earliest day after the injury each stage can start (UK grassroots guidance: no racing before day 21)
+const injNow=s=>{const i=S.prof&&S.prof.inj;return i&&i.area&&!i.done&&(!s||!i.start||s>=i.start)?i:null};
+const injDays=(i,s)=>Math.max(0,toN(s||todayS())-toN(i.start||todayS()));
+const injLabel=i=>(i.side&&i.side!=='na'&&i.area!=='head'&&i.area!=='ribs'&&i.area!=='back'?(i.side==='l'?'Left ':i.side==='r'?'Right ':'Both ')+INJ_NAME[i.area].toLowerCase():INJ_NAME[i.area]);
+const injStageName=i=>i.area==='head'?CONC_STAGES[(i.stage||1)-1]:INJ_STAGES[(i.stage||1)-1];
+const injStages=i=>i.area==='head'?6:3;
+
+/* which exercises load which area (matched on the exercise name) */
+const RX={
+  up:/press|push-?up|pull-?up|chin|row|dip|bench|carry|hang|wring|grip|curl|burpee|plank|shoulder tap|mountain|pike|band pull|face pull|landmine|throw|slam|farmer|suitcase|turkish|bear crawl|arm|wall ball/i,
+  grip:/pull-?up|chin|hang|wring|grip|carry|row|deadlift|rdl|farmer|suitcase|towel|clean|swing|press|push-?up|dip|bench|plank|burpee|pike|mountain|curl/i,
+  low:/squat|lunge|split|step|jump|bound|hop|pogo|landing|broad|calf|nordic|wall sit|rdl|deadlift|hinge|hip thrust|bridge|copenhagen|skater|sled|leg|box|trap bar|clean|swing|burpee|mountain|attack/i,
+  trunk:/deadlift|rdl|hinge|squat|carry|row|plank|v-up|knee raise|hollow|dead bug|bird dog|rotation|russian|sit-?up|crunch|slam|throw|burpee|clean|swing|good morning|back ext|pallof|side plank|copenhagen/i,
+  impact:/jump|bound|broad|landing|pogo|hop|burpee|drop|sprint|skater|box|plyo|step-off/i,
+  heavy:/back squat|front squat|deadlift|trap bar|bench|overhead press|clean|max|1rm|heavy/i,
+  ankleOK:/bridge|hip thrust|nordic|copenhagen|leg curl|knee raise|v-up|hollow|dead bug|bird dog|side plank|plank/i,
+  kneeOK:/bridge|hip thrust|copenhagen|knee raise|v-up|hollow|dead bug|bird dog|side plank|plank|calf/i,
+  neck:/neck/i,
+  held:/back squat|front squat|deadlift|rdl|romanian|ab wheel|rollout|air bike|trap bar|clean|snatch|swing|thruster|goblet|farmer|carry|pallof|landmine|med-?ball|sled/i
+};
+function injBlocks(area,name){const n=String(name||'');
+  if(area==='shoulder'||area==='collarbone')return RX.up.test(n)||RX.held.test(n)||/pallof/i.test(n)||RX.neck.test(n)&&area==='collarbone';
+  if(area==='arm')return RX.grip.test(n)||RX.held.test(n);
+  if(area==='back')return RX.trunk.test(n)||RX.impact.test(n)||RX.heavy.test(n);
+  if(area==='ribs')return RX.trunk.test(n)||/push-?up|pull-?up|chin|press|dip|bench|burpee|hang/i.test(n);
+  if(area==='hip')return RX.low.test(n)||/knee raise|v-up|copenhagen/i.test(n);
+  if(area==='knee')return RX.low.test(n)&&!RX.kneeOK.test(n)||/nordic/i.test(n);
+  if(area==='ankle')return RX.low.test(n)&&!RX.ankleOK.test(n);
+  return false}
+
+/* rehab for each area and stage. Conservative: only what is usually safe, the physio has the final say */
+const RH=(id,name,sets,reps,cue)=>E('rh_'+id,'Rehab: '+name,sets,reps,'Pain-free only','30 s',cue);
+const REHAB={
+  shoulder:[[RH('pend','Pendulum swings, arm hanging relaxed',3,'30 s','Lean on a table, let the arm swing in small circles. No effort from the shoulder.'),RH('scap','Shoulder-blade squeezes',3,'10 × 5 s','Squeeze the blades back and down, hold, relax.'),RH('iso','Isometric outward rotation against a wall',3,'5 × 10 s','Elbow at your side, push the back of the hand gently into the wall. 30% effort.')],
+    [RH('ber','Band outward rotation',3,'15','Elbow tucked to your side, slow both ways.'),RH('brow','Band row',3,'15','Squeeze the shoulder blades at the end.'),RH('wsl','Wall slides',3,'10','Forearms on the wall, slide up only as far as it stays pain-free.')],
+    [RH('pup','Push-up plus, hands on a bench',3,'10','At the top, push the floor away to spread the shoulder blades.'),RH('kp','Half-kneeling single-arm press, light',3,'10 each','Light dumbbell, ribs down, smooth.'),RH('hang','Bar hang with feet on the floor',3,'20 s','Take some weight through the arms, build up over the weeks.')]],
+  collarbone:[[RH('hand','Hand squeezes and wrist and elbow movement on the sling side',3,'15','Keeps the arm moving while the bone heals. Keep the shoulder still.'),RH('scap','Shoulder-blade squeezes',3,'10 × 5 s','Gentle, no pain.'),RH('walk','Walk',1,'20–30 min','Daily. Easy pace.')],
+    [RH('pend','Pendulum swings',3,'30 s','Only once your physio says the bone allows it.'),RH('iso','Isometric shoulder holds (forward, out, back)',3,'5 × 10 s each','30% effort against a wall.'),RH('ber','Band outward rotation',3,'12','Light band, elbow at your side.')],
+    [RH('pup','Push-up plus, hands on a bench',3,'10','Smooth and pain-free.'),RH('brow','Band row',3,'15','Full squeeze.'),RH('kp','Half-kneeling single-arm press, light',3,'10 each','Light.')]],
+  arm:[[RH('glide','Finger tendon glides and wrist circles',3,'10','Slow, full range that stays pain-free.'),RH('squeeze','Soft ball or putty squeeze',3,'15','Gentle. Stop if it hurts.')],
+    [RH('wc','Wrist curls and reverse curls, light',3,'15 each','1–2 kg, slow on the way down.'),RH('rice','Rice bucket: open, close, twist',3,'30 s','Hand buried in a bucket of rice.')],
+    [RH('wring','Towel wring',3,'20 s','Build the grip back up.'),RH('hang','Bar hang, feet on the floor',3,'20 s','Part bodyweight first.')]],
+  back:[[RH('walk','Walk',1,'20–30 min','Twice a day if you can. Walking helps most backs settle.'),RH('cc','Cat-cow',2,'10','Slow, small range that feels easy.'),RH('db','Dead bug',3,'8 each','Low back stays flat on the floor.')],
+    [RH('bd','Bird dog',3,'8 each','Reach long, hips level, no twisting.'),RH('gb','Glute bridge',3,'12','Squeeze the glutes, ribs down.'),RH('sp','Side plank on knees',3,'20 s each','Straight line from knees to head.')],
+    [RH('slrdl','Single-leg RDL, light',3,'8 each','Hips square, slow.'),RH('suit','Suitcase carry, light',3,'30 m each side','Stand tall, don\'t lean.'),RH('bext','Back extension, bodyweight',3,'10','Smooth, no swinging.')]],
+  ribs:[[RH('br','Deep breathing',5,'5 slow breaths','Every hour you\'re awake. Stops the chest stiffening up.'),RH('walk','Walk',1,'20–30 min','Easy pace.')],
+    [RH('db','Dead bug',3,'8 each','Only if it doesn\'t hurt to breathe hard.'),RH('bd','Bird dog',3,'8 each','Slow.')],
+    [RH('sp','Side plank',3,'20 s each','Build up the time.'),RH('pal','Pallof press',3,'10 each','Resist the twist.')]],
+  hip:[[RH('gs','Glute squeezes lying down',3,'10 × 5 s','Gentle.'),RH('hs','Heel slides',3,'10 each','Only through the pain-free range.')],
+    [RH('gb','Glute bridge',3,'12','Both legs.'),RH('sl','Side-lying leg raise',3,'12 each','Slow, toes forward.'),RH('cs','Clamshell',3,'15 each','Knees bent, feet together.')],
+    [RH('ss','Split squat, part range',3,'8 each','Only as deep as stays pain-free.'),RH('cph','Copenhagen plank, knee on the bench',3,'15 s each','Short lever version first.')]],
+  knee:[[RH('qs','Quad sets: tighten the thigh',3,'10 × 10 s','Leg straight, push the back of the knee down.'),RH('slr','Straight-leg raise',3,'10','Lock the knee first, then lift.'),RH('hs','Heel slides',3,'10','Bend only as far as stays pain-free.')],
+    [RH('ws','Wall sit, pain-free depth',3,'30 s','Shallow first, deeper over the weeks.'),RH('gb','Glute bridge',3,'12','Drive through the heels.'),RH('su','Step-up, low step',3,'10 each','Slow, knee tracks over the toes.')],
+    [RH('ss','Split squat',3,'8 each','Full range if pain-free.'),RH('slb','Single-leg balance',3,'30 s each','Eyes closed when it gets easy.'),RH('pogo','Small pogo hops',3,'15 s','Only once squats are pain-free.')]],
+  ankle:[[RH('alpha','Ankle alphabet',2,'1 alphabet','Draw the letters with your toes.'),RH('cst','Towel calf stretch',3,'30 s','Gentle pull, no pain.')],
+    [RH('cr','Calf raise, both legs',3,'15','Slow, full range.'),RH('slb','Single-leg balance',3,'30 s each','Near a wall for safety.')],
+    [RH('scr','Single-leg calf raise',3,'12 each','Off a step when it\'s easy.'),RH('lh','Small side-to-side hops',3,'15 s','Land soft.'),RH('cush','Balance on a cushion',3,'30 s each','Ankle stability for the footpegs.')]]
+};
+/* work for the parts that aren't hurt, so sessions stay worth doing */
+const ALT={
+  upper:()=>[E('ia_pu',isBW()?'Push-up (or seated dumbbell press)':'Seated dumbbell press',3,'10','Moderate','90 s','Seated so the legs rest.'),E('ia_row',isBW()?'Inverted row under a table':'Seated cable row',3,'12','Moderate','90 s','Squeeze the shoulder blades.'),E('ia_bp','Band pull-apart',3,'15','Band','45 s','Open the chest.')],
+  lower:()=>[E('ia_ws','Wall sit, hands off the legs',3,'45 s','Bodyweight','60 s','No arms needed.'),E('ia_slrdl','Single-leg RDL, hands free',3,'8 each','Bodyweight','60 s','Balance and hamstrings.'),E('ia_gb','Glute bridge',3,'12','Bodyweight','45 s','Drive through the heels.'),E('ia_cr','Calf raise',3,'15','Bodyweight','45 s','Full range.')],
+  core:()=>[E('ia_db','Dead bug',3,'8 each','Bodyweight','45 s','Back flat.'),E('ia_bd','Bird dog',3,'8 each','Bodyweight','45 s','Slow.')]
+};
+const ALT_FOR={shoulder:['lower','core'],collarbone:['lower'],arm:['lower','core'],back:['upper'],ribs:['lower'],hip:['upper'],knee:['upper','core'],ankle:['upper','core']};
+/* cardio that doesn't load the injury */
+const SAFE={
+  shoulder:['Static bike, hands resting light on the bars or off them. No rower, air bike, swimming or press-ups.','Static bike. Road bike only once you can hold the bars pain-free.','Any bike. Rower only if it\'s pain-free.'],
+  collarbone:['Static bike only, sitting upright, hands off the bars. No road bike: a fall now could undo the healing.','Static bike, hands light on the bars.','Road bike once your physio is happy with the bone.'],
+  arm:['Static bike sitting upright with a loose grip, or walking. No rower, air bike or grip work.','Static bike or easy run. Light grip only.','Any cardio that\'s pain-free.'],
+  back:['Walking or static bike, sitting upright. No running, rower or jumping.','Static bike or walking. Short runs only if pain-free the next morning.','Any cardio that\'s pain-free the next morning.'],
+  ribs:['Walking or very easy static bike. Keep breathing comfortable: no hard efforts.','Static bike at Zone 2 only. No hard breathing yet.','Any cardio, building back to hard efforts.'],
+  hip:['Swim with a pull buoy (arms only) or a seated upper-body circuit. Bike only if pain-free.','Static bike, low resistance, if pain-free. Or swim with a pull buoy.','Any bike. Running only if pain-free.'],
+  knee:['Swim with a pull buoy (arms only) or a seated upper-body circuit. No bike, running or jumping yet.','Static bike, low resistance, seat a little higher than usual, if pain-free.','Any bike. Running once single-leg squats are pain-free.'],
+  ankle:['Swim with a pull buoy or a seated upper-body circuit. No weight-bearing cardio.','Static bike, low resistance, if pain-free.','Any bike. Running once hopping is pain-free.']
+};
+function injSess(sess,i,st,s){if(!sess)return sess;const a=i.area,nm=injLabel(i);
+  if(sess.code==='TEST'&&st<3)return sess.id==='am'?injSess({...cond('z2',ctx(s).mode,1),id:'am'},i,st,s):{id:'pm',time:'17:45',title:'Rehab: '+nm.toLowerCase()+' (testing waits until you\'re back)',code:'REHAB',tier:'EASY',mins:20,ex:REHAB[a][st-1],inj:true};
+  if(sess.ex){let ex=sess.ex.slice(),gone=0;
+    const handsFree=/^(shoulder|collarbone|arm)$/.test(a)&&st<3;
+    ex=ex.map(x=>{if(x.fin&&st<3){gone++;return null}
+      if(!injBlocks(a,x.name))return handsFree&&!/^rh_/.test(x.id)&&RX.low.test(x.name)?{...x,load:'Bodyweight: nothing in your hands',cue:(x.cue||'')+' Injury: keep the arms relaxed, no weights held.'}:x;
+      if(st===1){gone++;return null}
+      if(st===2){if(RX.impact.test(x.name)||RX.heavy.test(x.name)){gone++;return null}return {...x,sets:Math.max(2,Math.round(x.sets*.6)),load:'Light, pain-free only (max 3/10 pain)',cue:(x.cue||'')+' Injury: stop if pain goes above 3/10.'}}
+      return {...x,sets:Math.max(2,Math.round(x.sets*.8)),load:(x.load?x.load+' · ':'')+'about 70% of normal',cue:(x.cue||'')+' Coming back from injury: build up over 2 weeks.'}}).filter(Boolean);
+    if(st===1&&gone){const pool=(ALT_FOR[a]||[]).flatMap(k=>ALT[k]()).filter(x=>!ex.some(y=>y.name===x.name));ex=ex.concat(pool.slice(0,Math.min(gone,3)))}
+    if(st<3)ex=ex.concat(REHAB[a][st-1]);
+    return {...sess,title:sess.title+' · injury version',ex,mins:Math.max(25,Math.min(sess.mins||45,60)),steps:sess.steps,inj:true,warm:sess.warm,post:(sess.post||[]).filter(p=>!(st<3&&p&&p.rows&&/dig|deep/i.test(p.title||'')))}}
+  if(sess.kind){const kind=sess.kind,hard=!/^(z2|long|recov|mob|rest)$/.test(kind),eq=injEq(a,st);
+    if((st===1&&hard)||(st===2&&kind==='circ')||(a==='ribs'&&st<3&&hard))return {...sess,kind:'z2',main:35,hr:hr(.65,.75),mins:45,title:'Zone 2, injury-safe',tier:'EASY',code:'Z2',amber:false,eq,inj:true};
+    if(kind==='long'&&st<3)return {...sess,main:Math.min(sess.main||60,60),mins:Math.min(sess.mins||70,70),eq,inj:true};
+    return {...sess,eq:eq||sess.eq,inj:true}}
+  return sess}
+function concDay(i,st,s){const day=injDays(i,s),lock=day<CONC_DAY[st-1];const P0=(title,am)=>({c:ctx(s),am,pm:null,track:null,type:'rec',title,inj:true});
+  const A0=(title,mins,steps)=>({id:'am',time:'08:00',title,code:'CONC',tier:'EASY',mins,steps,inj:true});
+  if(st===1)return P0('Concussion: rest',A0('Relative rest',20,['Day '+(day+1)+' since the concussion.','Normal daily life is fine: short easy walks, light screen time.','No training, no lifting, nothing that raises your heart rate much.','If headaches, dizziness or sickness get worse, or you feel confused or very sleepy: call 111, or 999 if it\'s severe.']));
+  if(st===2)return P0('Concussion: light activity',A0('Light activity',20,['Walk or very easy static bike, 15–20 min, under '+Math.round(MAXHR()*.6)+' bpm.','Symptoms can go up a little but must settle within an hour. If they don\'t, go back a stage tomorrow.','No lifting, no riding.']));
+  if(st===3)return P0('Concussion: steady cardio',A0('Steady cardio',30,['Static bike or jog, 20–30 min at '+hr(.6,.7)+'.','No head movement drills, no lifting yet.','Stay here at least 24 hours symptom-free before moving on.']));
+  if(st===4)return null; // gym and harder cardio: normal plan, riding still blocked
+  return null}
+const INJ_EQN={shoulder:['Static bike','Static bike','Bike'],collarbone:['Static bike, hands off the bars','Static bike','Bike'],arm:['Static bike, loose grip','Static bike','Bike'],back:['Static bike or walk','Static bike or walk','Bike or run'],ribs:['Walk or easy static bike','Static bike','Bike'],hip:['Swim (pull buoy) or upper-body circuit','Static bike, low resistance','Bike'],knee:['Swim (pull buoy) or upper-body circuit','Static bike, low resistance','Bike'],ankle:['Swim (pull buoy) or seated upper-body circuit','Static bike, low resistance','Bike']};
+function injEq(a,st){if(st>=3||!INJ_EQN[a])return null;const k='inj_'+a+st;EQ[k]=[INJ_EQN[a][st-1],'Injury: '+SAFE[a][st-1]];return k}
+/* the hook plan() calls: rewrites a day around the injury */
+function injDay(r,s){const i=injNow(s);if(!i)return r;const st=Math.max(1,Math.min(injStages(i),+i.stage||1));
+  if(i.area==='head'){const c=concDay(i,st,s);if(c)return c;
+    if(st<5&&(r.track||r.type==='track'||r.type==='race'))return {...r,type:'rec',track:null,title:'No riding: concussion stage '+st,am:cond('z2',ctx(s).mode,1),inj:true};
+    if(st<6&&r.type==='race')return {...r,type:'rec',track:null,title:'No racing yet: not before day 21 and only once a doctor clears you',am:cond('z2',ctx(s).mode,1),inj:true};
+    return {...r,inj:true}}
+  let o={...r,inj:true};const rideOK=st===3&&i.ride;
+  if((r.track||r.type==='track'||r.type==='race')&&!rideOK){const m=ctx(s).mode;o={...o,type:'rec',track:null,title:'No riding: '+injLabel(i).toLowerCase(),am:injSess(cond('z2',m,1),i,st,s)}}
+  o.am=injSess(o.am,i,st,s);o.pm=injSess(o.pm,i,st,s);
+  if(st<3&&!o.pm&&!(o.am&&o.am.ex))o.pm={id:'pm',time:'17:45',title:'Rehab: '+injLabel(i).toLowerCase(),code:'REHAB',tier:'EASY',mins:20,ex:REHAB[i.area][st-1],steps:null,inj:true};
+  if(o.title&&!/^No riding/.test(o.title))o.title=o.title+' (injury)';
+  return o}
+
+/* ---------- injury UI ---------- */
+const INJ_SEV=[['sore','Sore','I can still train around it'],['cant','Can\'t load it','It hurts to use it'],['break','Fracture or surgery','Bone broken or operated on']];
+const INJ_NEXT=['Move on when pain at rest has gone, the rehab is pain-free (3/10 at most) and your physio agrees.','Move on when you have full pain-free movement, strength is close to the other side and your physio agrees.','You\'re back when you train at normal loads with no pain the next morning for a week.'];
+const INJ_WHAT=['The injured area is rested. Everything else keeps training, with rehab every day.','The injured area comes back in, light and pain-free. No jumps or heavy lifts on it yet.','Full plan at about 70%, building back over 2 weeks. Riding only once you tick cleared to ride.'];
+const CONC_WHAT=['Normal daily life and short walks only. At least 24–48 hours.','Walks or very easy static bike, 15–20 min.','20–30 min bike or jog. No lifting.','Back to the normal plan, no riding. Not before day 8.','Only once a doctor has cleared you. Not before day 15.','Not before day 21 after the injury, and only with a doctor\'s OK.'];
+function injBanner(){const i=injNow(S.date);if(!i)return '';const st=+i.stage||1,head=i.area==='head';
+  return '<div class="card injb"><span class="lab">INJURY MODE · '+esc(injLabel(i).toUpperCase())+' · STAGE '+st+' OF '+injStages(i)+'</span><p style="margin:4px 0 0"><b>'+esc(injStageName(i))+'.</b> '+esc((head?CONC_WHAT:INJ_WHAT)[st-1])+'</p><p class="mut" style="margin:6px 0 0;font-size:13px">Keep protein high and don\'t cut calories hard: healing needs fuel. Pain that gets worse, numbness, or swelling that won\'t settle: see a doctor. <a href="#stats" data-ss="profile">Update injury</a></p></div>'}
+function injCard(){const i=S.prof&&S.prof.inj&&!S.prof.inj.done?S.prof.inj:null,F=S.injF;let b='';
+  if(F){const area=F.area,sided=area&&!/^(head|ribs|back)$/.test(area),chip=(k,v,t,d)=>'<button type="button" class="'+(F[k]===v?'on':'')+'" aria-pressed="'+(F[k]===v)+'" data-injf="'+k+'|'+v+'"><b>'+t+'</b>'+(d?'<span>'+d+'</span>':'')+'</button>';
+    b='<p class="al">What\'s injured?</p><div class="obseg chips">'+INJ_AREAS.map(([v,t])=>chip('area',v,t)).join('')+'</div>'
+      +(sided?'<p class="al">Which side?</p><div class="obseg chips">'+[['l','Left'],['r','Right'],['b','Both']].map(([v,t])=>chip('side',v,t)).join('')+'</div>':'')
+      +(area&&area!=='head'?'<p class="al">How bad?</p><div class="obseg">'+INJ_SEV.map(([v,t,d])=>chip('sev',v,t,d)).join('')+'</div>':'')
+      +(area==='head'?'<p class="mut" style="font-size:13px">Any suspected concussion: no riding or training for at least 24 hours, and see a doctor (call 111). If symptoms get worse, call 999.</p>':'')
+      +'<div class="fields" style="margin-top:8px"><div><label for="injd">When did it happen?</label><input id="injd" type="date" value="'+esc(F.start||todayS())+'"></div></div>'
+      +(F.sev==='break'?'<p class="mut" style="font-size:13px">With a fracture or surgery, follow your surgeon\'s and physio\'s plan first. The app keeps the rest of you training and only adds rehab that\'s usually safe.</p>':'')
+      +'<div class="row2" style="margin-top:10px"><button id="injSave"'+(area?'':' disabled')+'>Change my plan</button><button class="ghost" id="injCancel">Cancel</button></div>'}
+  else if(!i)b='<p class="mut" style="margin-top:0">Hurt? Tell the app what\'s injured. Your plan works around it in stages, with rehab built in, until you\'re back to full training.</p><button id="injStart">I\'m injured</button>';
+  else{const st=+i.stage||1,n=injStages(i),head=i.area==='head',day=injDays(i),gate=head&&st<n?CONC_DAY[st]:0,locked=head&&day<gate,needDoc=head&&st>=4&&!i.doc;
+    b='<p style="margin:0"><b>'+esc(injLabel(i))+'</b> · day '+(day+1)+' · stage '+st+' of '+n+': <b>'+esc(injStageName(i))+'</b></p><p class="mut" style="margin:6px 0 0">'+esc((head?CONC_WHAT:INJ_WHAT)[st-1])+'</p>'
+      +'<p class="mut" style="margin:6px 0 0;font-size:13px">'+esc(head?(st<n?'Each stage needs at least 24 hours without symptoms. If symptoms come back, go back a stage.':'Back to full training and racing.'):INJ_NEXT[st-1])+'</p>'
+      +(head&&st>=4?'<button type="button" class="'+(i.doc?'':'ghost')+'" id="injDoc" style="margin-top:8px">'+(i.doc?'✓ A doctor has cleared me':'A doctor has cleared me to ride')+'</button>':'')
+      +(!head?'<button type="button" class="'+(i.ride?'':'ghost')+'" id="injRide" style="margin-top:8px">'+(i.ride?'✓ Cleared to ride':'My physio has cleared me to ride')+'</button>'+(i.ride&&st<3?'<p class="mut" style="font-size:12px;margin:4px 0 0">Riding switches back on at stage 3.</p>':''):'')
+      +'<div class="row2" style="margin-top:10px;flex-wrap:wrap">'+(st<n?'<button id="injNext"'+(locked||needDoc?' disabled':'')+'>Next stage</button>':'')+(st>1?'<button class="ghost" id="injBack">Back a stage</button>':'')+'<button class="ghost" id="injDone">'+(S.injDoneAsk?'Tap again: I\'m fully back':'I\'m recovered')+'</button></div>'
+      +(locked?'<p class="mut" style="font-size:12px;margin:6px 0 0">The next stage unlocks on day '+(gate+1)+'.</p>':'')+(needDoc&&st<n?'<p class="mut" style="font-size:12px;margin:6px 0 0">Riding needs a doctor\'s all-clear first.</p>':'')}
+  return '<div class="card" style="max-width:760px"><span class="lab">INJURY'+(i?' · ON':'')+'</span>'+b+'</div>'}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#injStart,#injCancel,#injSave,[data-injf],#injNext,#injBack,#injRide,#injDoc,#injDone');if(!t)return;
+  const P=S.prof||(S.prof={}),i=P.inj,put=()=>{save('profile/main',true);render()};
+  if(t.id==='injStart'){S.injF={area:'',side:'l',sev:'cant',start:todayS()};render();return}
+  if(t.id==='injCancel'){S.injF=null;render();return}
+  if(t.dataset.injf){const [k,v]=t.dataset.injf.split('|');const d=($('#injd')||{}).value;if(d)S.injF.start=d;S.injF[k]=v;render();return}
+  if(t.id==='injSave'){const F=S.injF,d=($('#injd')||{}).value||todayS();if(!F||!F.area)return;
+    P.inj={area:F.area,side:/^(head|ribs|back)$/.test(F.area)?'na':F.side,sev:F.area==='head'?'head':F.sev,stage:F.area!=='head'&&F.sev==='sore'?2:1,ride:false,doc:false,start:d,set:new Date().toISOString()};S.injF=null;put();return}
+  if(!i)return;
+  if(t.id==='injNext'){const n=injStages(i);i.stage=Math.min(n,(+i.stage||1)+1);put();return}
+  if(t.id==='injBack'){i.stage=Math.max(1,(+i.stage||1)-1);put();return}
+  if(t.id==='injRide'){i.ride=!i.ride;put();return}
+  if(t.id==='injDoc'){i.doc=!i.doc;put();return}
+  if(t.id==='injDone'){if(!S.injDoneAsk){S.injDoneAsk=true;render();return}S.injDoneAsk=false;P.injHist=(P.injHist||[]).concat([{...i,end:todayS()}]).slice(-10);P.inj=null;put();return}
+});
 /* ---------- GPS lap timing engine ---------- */
 const G=(()=>{
 const R=6371008.8,RAD=Math.PI/180,FIT0=631065600,SC=180/2147483648;
@@ -950,7 +1113,7 @@ function renderTiming(){
     +'<label class="filebtn" for="gfile">'+(S.gbusy?'Analysing…':'Choose GPS file')+'</label><input id="gfile" class="vh" type="file" accept=".gpx,.tcx,.fit,.csv,.txt">'
     +(S.gerr?'<p style="color:var(--red);font-weight:600">'+esc(S.gerr)+'</p>':'')+'</div>';
   const how='<div class="card"><span class="lab">GETTING THE FILE</span><ul class="steps"><li><b>Polar watch:</b> easiest is Connect Polar above. Or on flow.polar.com open the session and export it as TCX or GPX. Record in a sport profile with GPS on its highest accuracy setting.</li><li><b>GPS on the bike</b> (RaceBox, AiM, VBOX, phone app): export CSV, GPX or FIT.</li><li><b>Accuracy:</b> watch GPS (1 sample a second) gives lap and sector times to about ±0.2 s. Corner speeds and braking points need 10 Hz or more from a unit mounted on the bike.</li></ul></div>';
-  return '<div class="grid"><div>'+polarCard()+imp+how+'</div><div>'+gSessList(gsess(),'GPS SESSIONS')+'</div></div>';
+  return '<div class="grid"><div>'+polarCard()+imp+'</div><div>'+gSessList(gsess(),'GPS SESSIONS')+how+'</div></div>';
 }
 function gChart(d,sel,cmp){const best=cmp||d.laps[d.best],a=best.v5||[];if(a.length<3)return '';const b=sel!==best&&sel.v5?sel.v5:null,W=640,H=210,pl=40,pb=24,n=a.length,mx=Math.max(...a,...(b||[]))*1.08;
   const X=i=>pl+(W-pl-8)*i/(n-1),Y=v=>(H-pb)-(H-pb-8)*v/mx,path=arr=>arr.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');
@@ -1190,7 +1353,7 @@ async function geoSearch(tk,q){S.geoRes=S.geoRes||{};S.geoRes[tk]=null;try{const
 /* ---------- Polar ---------- */
 async function pf(body){const {data,error}=await window.MXSB.functions.invoke('polar',{body});if(error){let m=error.message;try{const j=await error.context.json();m=j.error||m}catch(_){}throw new Error(m)}return data}
 const PMSG={polar_keys_missing:'Polar keys aren\'t added yet. See the setup steps Claude gave you.',not_connected:'Polar isn\'t connected yet.',polar_auth:'Polar access ended. Connect again.',not_signed_in:'Sign in again.'};
-async function polarStatus(){S.polar={loading:true};try{const r=await pf({action:'status'});S.polar={connected:r.connected,keys:r.keys,since:r.since,msg:S.polarMsgOnce||''};S.polarMsgOnce=''}catch(e){S.polar={err:PMSG[e.message]||'Could not reach Polar: '+e.message}}render()}
+async function polarStatus(){S.polar={loading:true};try{const r=await pf({action:'status'});S.polar={connected:r.connected,keys:r.keys,since:r.since,msg:S.polarMsgOnce||''};S.polarMsgOnce='';try{const was=localStorage.getItem('mxp:on');localStorage.setItem('mxp:on',r.connected?'1':'0');if(r.connected&&was!=='1'&&typeof polarAuto==='function')polarAuto(true)}catch(_){}}catch(e){S.polar={err:PMSG[e.message]||'Could not reach Polar: '+e.message}}render()}
 function polarCard(){if(!window.MXSB)return '';if(!S.polar){setTimeout(polarStatus,0);S.polar={loading:true}}const p=S.polar;let b='';
   const trkName=S.gtrk&&S.tracks[S.gtrk]?S.tracks[S.gtrk].name:(S.gname||'');const imported=new Set(Object.values(S.gpsx).map(d=>d&&d.polarId).filter(Boolean));
   if(p.loading)b='<p class="mut">Checking Polar…</p>';else if(p.err)b='<p style="color:var(--red);font-weight:600">'+esc(p.err)+'</p><button class="ghost" id="pstat">Try again</button>';
@@ -1270,10 +1433,46 @@ document.addEventListener('click',async e=>{const t=e.target.closest&&e.target.c
   if(t.id==='wdis'){if(!S.wdis){S.wdis=true;render();return}S.wdis=false;try{await wf({action:'disconnect'})}catch(_){}wLS.set('on','0');S.whoop=null;render();return}
   if(t.id==='wcon'){t.disabled=true;try{const r=await wf({action:'start',returnUrl:location.href.split('#')[0].split('?')[0]});location.href=r.url}catch(err){S.whoop.msg=WMSG[err.message]||err.message;t.disabled=false;render()}return}});
 (()=>{try{const q=new URLSearchParams(location.search),p=q.get('whoop');if(p){S.ssub='profile';S.whoop=null;S.whoopMsgOnce=p==='ok'?'WHOOP connected. Your last 30 days are in.':'WHOOP connection didn\'t finish ('+p+'). Try Connect WHOOP again.';if(p==='ok'){wLS.set('on','1');wLS.set('last',String(Date.now()))}history.replaceState(null,'',location.pathname+'#stats')}}catch(e){}})();
+
+/* ---------- wearables: what each rider wears decides where recovery, sleep and strain come from ---------- */
+const DEVICES=[['whoop','WHOOP','Syncs on its own'],['polar','Polar','Syncs on its own'],['garmin','Garmin','2 numbers each morning'],['apple','Apple Watch','2 numbers each morning'],['none','Nothing','How-you-feel check-in']];
+/* null = never asked (the original riders): keep the Whoop-style check-in */
+const devs=()=>{if(!CFG)return new Set(['whoop','polar']);if(CFG.devices==null)return null;return new Set(String(CFG.devices).split(',').filter(Boolean))};
+const hasWhoop=()=>{const d=devs();return !d||d.has('whoop')};
+const hasPolar=()=>{const d=devs();return !d||d.has('polar')};
+/* readiness for riders without WHOOP: how they feel, adjusted by sleep and resting HR against their own week */
+const FEEL=[[1,'Wrecked'],[2,'Tired'],[3,'OK'],[4,'Good'],[5,'Great']];
+function readyCalc(doc){const o=docObj(doc),w=o.whoop||{};if(w.src==='whoop'||w.src==='polar')return;const f=+w.feel;if(!(f>=1&&f<=5))return;
+  let r=[0,20,40,60,75,90][f];const sl=sleepH(w.sleep);if(sl>0){if(sl<6)r-=15;else if(sl<7)r-=8;else if(sl>=8)r+=5}
+  const day=doc.split('/')[1],base=[];for(let i=1;i<=7;i++){const v=+getK(S.days[toS(toN(day)-i)]||{},'whoop.rhr');if(v>0)base.push(v)}
+  const rh=+w.rhr;if(rh>0&&base.length>=3){const b=base.reduce((x,y)=>x+y,0)/base.length;if(rh>=b+5)r-=10;else if(rh>=b+3)r-=5;else if(rh<=b-3)r+=3}
+  setK(o,'whoop.rec',Math.max(5,Math.min(99,Math.round(r))));setK(o,'whoop.src','feel')}
+function feelRow(doc){const o=docObj(doc),cur=+getK(o,'whoop.feel');
+  return '<p class="al" style="margin-top:12px">How do you feel this morning?</p><div class="feel">'+FEEL.map(([v,t])=>'<button type="button" class="'+(cur===v?'on':'')+'" aria-pressed="'+(cur===v)+'" data-feel="'+v+'" data-fdoc="'+esc(doc)+'"><b>'+v+'</b><span>'+t+'</span></button>').join('')+'</div>'}
+/* the morning check-in fields, matched to what the rider wears */
+function checkinFields(doc,s){const d=devs(),o=docObj(doc),w=o.whoop||{},auto=w.src==='polar'||w.src==='whoop';
+  if(hasWhoop())return null; // keep the Whoop form
+  const watch=d&&d.has('garmin')?'Garmin':d&&d.has('apple')?'Apple Watch':d&&d.has('polar')?'Polar':'';
+  return (auto?'<p class="mut" style="margin:12px 0 0;font-size:13px">Synced from Polar: readiness '+(+w.rec||'—')+'%, sleep '+(sleepH(w.sleep)>0?fmtH(sleepH(w.sleep)):'—')+(w.hrv?', HRV '+w.hrv+' ms':'')+(w.rhr?', resting HR '+w.rhr:'')+'.</p>':feelRow(doc))
+    +'<div class="fields" style="margin-top:8px">'+(auto?'':fld(doc,'whoop.sleep','Sleep (e.g. 7:50)')+fld(doc,'whoop.rhr',watch?'Resting HR ('+watch+')':'Resting HR (optional)'))+fld(doc,'weight','Weight (kg)')+(dow(s)===1?fld(doc,'waist','Waist (cm), Mondays'):'')+'</div>'
+    +(auto||!watch?'':'<p class="mut" style="font-size:12px;margin:6px 0 0">Sleep and resting HR are in the '+watch+' app. Your readiness score uses how you feel, your sleep and your resting HR against your normal.</p>')}
+const recLabel=()=>hasWhoop()?'RECOVERY':'READINESS';
+/* third ring: WHOOP strain, else Polar training load, else what's planned */
+function strainRing(d,L){const w=(d&&d.whoop)||{},st=+w.strain,cl=+w.cload;
+  if(st>0)return ring(st,21,'var(--blue)','STRAIN',st.toFixed(1),'yesterday','#log');
+  if(cl>0)return ring(cl,150,'var(--blue)','LOAD',String(Math.round(cl)),'yesterday','#log');
+  return ring(L.a/12*21,21,'var(--blue)',hasWhoop()?'STRAIN':'LOAD',L.k?'Key':L.a>=4?'High':L.a>=2?'Med':'Low','planned','#log')}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-feel]');if(!t)return;const doc=t.dataset.fdoc,o=docObj(doc);
+  setK(o,'whoop.feel',+t.dataset.feel);readyCalc(doc);save(doc,true);render()});
+/* Polar sleep + Nightly Recharge + load: synced automatically like WHOOP, at most every 20 minutes */
+function polarAuto(force){if(!window.MXSB||!hasPolar())return;let on=null,last=0;try{on=localStorage.getItem('mxp:on');last=+localStorage.getItem('mxp:last')||0}catch(_){}
+  if(on==='0'||(!force&&Date.now()-last<20*60*1000))return;try{localStorage.setItem('mxp:last',String(Date.now()))}catch(_){}
+  pf({action:'daily',days:on===null?14:4}).then(()=>{try{localStorage.setItem('mxp:on','1')}catch(_){}}).catch(e=>{if(e.message==='not_connected'||e.message==='polar_auth'){try{localStorage.setItem('mxp:on','0')}catch(_){}}})}
+setTimeout(()=>polarAuto(false),3500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')polarAuto(false)});
 /* ---------- onboarding: new riders answer a few questions, the plan builds itself ---------- */
 const needsOnboard=()=>!!(window.MXSB&&S.db&&S.profReady&&(!S.prof||(!S.prof.cfg&&!S.prof.legacy))||S.obEdit);
 const nextSat=()=>{let s=todayS();s=addD(s,1);while(dow(s)!==6)s=addD(s,1);return s};
-function obInit(){if(S.ob)return;const c=(S.prof&&S.prof.cfg)||{};S.ob={step:S.obEdit?1:0,err:'',a:{name:(S.prof&&S.prof.name)||'',age:c.age||'',sex:c.sex||'m',height:c.height||'',weight:c.weight||'',goal:c.goal||'lose',diet:c.diet||'',r1:c.r1||'',races:(c.races||[]).filter(r=>r[0]!==c.r1),start:c.start||nextSat(),daily:c.daily||2,ride:c.ride||'both',style:c.style||'gym',maxHR:(S.prof&&S.prof.maxHR)||''}}}
+function obInit(){if(S.ob)return;const c=(S.prof&&S.prof.cfg)||{};S.ob={step:S.obEdit?1:0,err:'',a:{name:(S.prof&&S.prof.name)||'',age:c.age||'',sex:c.sex||'m',height:c.height||'',weight:c.weight||'',goal:c.goal||'lose',diet:c.diet||'',r1:c.r1||'',races:(c.races||[]).filter(r=>r[0]!==c.r1),start:c.start||nextSat(),daily:c.daily||2,ride:c.ride||'both',style:c.style||'gym',devices:c.devices!=null?c.devices:'',maxHR:(S.prof&&S.prof.maxHR)||''}}}
 const obF=(id,lab,val,o)=>'<div><label for="ob-'+id+'">'+lab+'</label><input id="ob-'+id+'" data-ob="'+id+'" value="'+esc(val)+'"'+(o&&o.type?' type="'+o.type+'"':'')+(o&&o.num?' inputmode="decimal"':'')+' placeholder="'+esc((o&&o.ph)||'')+'"></div>';
 const obSeg=(k,opts)=>'<div class="obseg" role="radiogroup">'+opts.map(([v,t,d])=>'<button type="button" role="radio" aria-checked="'+(String(S.ob.a[k])===String(v))+'" class="'+(String(S.ob.a[k])===String(v)?'on':'')+'" data-obv="'+k+'|'+v+'"><b>'+t+'</b>'+(d?'<span>'+d+'</span>':'')+'</button>').join('')+'</div>';
 function renderOnboard(){obInit();const st=S.ob.step,a=S.ob.a,N=5;let h='';
@@ -1289,6 +1488,7 @@ function renderOnboard(){obInit();const st=S.ob.step,a=S.ob.a,N=5;let h='';
     +'<p class="al">Add another race</p><div class="fields">'+obF('rd','Date','',{type:'date'})+obF('rn','Name','',{ph:'Round 2, warm-up race…'})+'</div><button type="button" class="ghost" id="obAdd" style="margin-top:8px">Add race</button>'}
   if(st===4)h=head('Your week','')+'<div class="fields">'+obF('start','Plan starts (moves to the Saturday)',a.start,{type:'date'})+obF('maxHR','Max heart rate (leave blank if unsure)',a.maxHR,{num:1,ph:a.age?String(Math.round(208-0.7*a.age)):'200'})+'</div>'
     +'<p class="al">Training style</p>'+obSeg('style',[['gym','Gym','Barbell strength, Wattbike, rower'],['bw','No gym','Bodyweight at home + lots of cycling']])
+    +'<p class="al">What do you wear? Pick all that apply</p><div class="obseg chips">'+DEVICES.map(([v,t,d])=>{const on=String(a.devices).split(',').includes(v);return '<button type="button" role="checkbox" aria-checked="'+on+'" class="'+(on?'on':'')+'" data-obw="'+v+'"><b>'+t+'</b><span>'+d+'</span></button>'}).join('')+'</div>'
     +'<p class="al">Weekday training</p>'+obSeg('daily',[['2','Twice a day','Before and after work: conditioning AM, strength PM'],['1','Once a day','Strength Mon and Wed, intervals Tue and Thu']])
     +'<p class="al">Riding days</p>'+obSeg('ride',[['both','Sat and Sun'],['sat','Saturday'],['sun','Sunday']]);
   if(st===5){const cfg=obCfg();applyCfg(cfg);const f=fuel(plan(addD(cfg.start,9)));const wk=[0,1,2,3,4,5,6].map(i=>{const s=addD(cfg.start,7+i),p=plan(s);return '<div class="chk" style="grid-template-columns:52px minmax(0,1fr)"><b>'+DN[dow(s)]+'</b><span>'+esc(p.title)+'</span></div>'}).join('');applyCfg(S.prof&&S.prof.cfg);
@@ -1296,18 +1496,19 @@ function renderOnboard(){obInit();const st=S.ob.step,a=S.ob.a,N=5;let h='';
     +'<p class="mut" style="font-size:13px;margin-top:12px">Week 1 is testing: your gym numbers set every weight in the plan. You can change any of this later in Profile.</p>'}
   const nav='<div class="obnav">'+(st>0?'<button type="button" class="ghost" id="obBack">Back</button>':(S.obEdit?'<button type="button" class="ghost" id="obCancel">Cancel</button>':'<span></span>'))+'<button type="button" id="obNext">'+(st===0?'Start':st===N?(S.obEdit?'Save changes':'Build my plan'):'Next')+'</button></div>';
   return '<div class="ob"><div class="obbar" aria-hidden="true"><i style="width:'+(st/N*100)+'%"></i></div>'+h+(S.ob.err?'<p class="oberr" role="alert">'+esc(S.ob.err)+'</p>':'')+nav+'</div>'}
-function obCfg(){const a=S.ob.a;return {name:String(a.name).trim().slice(0,30),age:+a.age,sex:a.sex,height:+a.height,weight:+a.weight,goal:a.goal,diet:a.diet,r1:a.r1,races:[[a.r1,'Round 1']].concat(a.races),start:a.start,daily:+a.daily,ride:a.ride,style:a.style}}
+function obCfg(){const a=S.ob.a;return {name:String(a.name).trim().slice(0,30),age:+a.age,sex:a.sex,height:+a.height,weight:+a.weight,goal:a.goal,diet:a.diet,r1:a.r1,races:[[a.r1,'Round 1']].concat(a.races),start:a.start,daily:+a.daily,ride:a.ride,style:a.style,devices:a.devices||'none'}}
 function obCheck(st){const a=S.ob.a,n=(v,lo,hi)=>v!==''&&isFinite(+v)&&+v>=lo&&+v<=hi;
   if(st===1){if(!String(a.name).trim())return 'Enter your first name.';if(!n(a.age,14,70))return 'Enter your age (14–70).';if(!n(a.height,130,215))return 'Enter your height in cm, like 178.';if(!n(a.weight,40,150))return 'Enter your weight in kg, like 72.'}
   if(st===3){if(!/^\d{4}-\d\d-\d\d$/.test(a.r1||''))return 'Pick your Round 1 date.';if(toN(a.r1)<toN(todayS())+14)return 'Round 1 needs to be at least 2 weeks away to build a plan.'}
-  if(st===4){if(!/^\d{4}-\d\d-\d\d$/.test(a.start||''))return 'Pick a start date.';if(toN(a.start)>=toN(a.r1)-7)return 'Start at least a week before Round 1.';if(a.maxHR!==''&&!n(a.maxHR,150,225))return 'Max heart rate should be between 150 and 225, or leave it blank.'}
+  if(st===4){if(!/^\d{4}-\d\d-\d\d$/.test(a.start||''))return 'Pick a start date.';if(toN(a.start)>=toN(a.r1)-7)return 'Start at least a week before Round 1.';if(a.maxHR!==''&&!n(a.maxHR,150,225))return 'Max heart rate should be between 150 and 225, or leave it blank.';if(!String(a.devices||'').trim())return 'Pick what you wear, or Nothing.'}
   return ''}
 document.addEventListener('input',e=>{const t=e.target;if(!t||!t.dataset||!t.dataset.ob||!S.ob)return;if(t.dataset.ob!=='rd'&&t.dataset.ob!=='rn')S.ob.a[t.dataset.ob]=t.value.trim();S.ob.err=''});
-document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#obNext,#obBack,#obCancel,#obAdd,[data-obv],[data-obd],[data-obx],#obEdit');if(!t)return;
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#obNext,#obBack,#obCancel,#obAdd,[data-obv],[data-obd],[data-obw],[data-obx],#obEdit');if(!t)return;
   if(t.id==='obEdit'){S.ob=null;S.obEdit=true;render();window.scrollTo(0,0);return}
   if(!S.ob)return;const a=S.ob.a;
   if(t.dataset.obv){const [k,v]=t.dataset.obv.split('|');a[k]=v;render();return}
   if(t.dataset.obd){const set=new Set(String(a.diet).split(',').filter(Boolean));set.has(t.dataset.obd)?set.delete(t.dataset.obd):set.add(t.dataset.obd);a.diet=[...set].join(',');render();return}
+  if(t.dataset.obw){const v=t.dataset.obw;let set=new Set(String(a.devices).split(',').filter(Boolean));if(set.has(v))set.delete(v);else{if(v==='none')set=new Set();else set.delete('none');set.add(v)}a.devices=[...set].join(',');S.ob.err='';render();return}
   if(t.dataset.obx!==undefined){a.races.splice(+t.dataset.obx,1);render();return}
   if(t.id==='obAdd'){const d=($('#ob-rd')||{}).value,nm=(($('#ob-rn')||{}).value||'').trim();if(!/^\d{4}-\d\d-\d\d$/.test(d||'')){S.ob.err='Pick the race date first.';render();return}a.races.push([d,nm||'Race']);a.races.sort((x,y)=>x[0].localeCompare(y[0]));S.ob.err='';render();return}
   if(t.id==='obBack'){S.ob.step=Math.max(S.obEdit?1:0,S.ob.step-1);S.ob.err='';render();window.scrollTo(0,0);return}
@@ -1317,6 +1518,65 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
     const cfg=obCfg();S.prof.cfg=cfg;S.prof.name=cfg.name;if(a.maxHR!=='')S.prof.maxHR=+a.maxHR;else if(!S.prof.maxHR)S.prof.maxHR=Math.round(208-0.7*cfg.age);
     save('profile/main',true);S.ob=null;S.obEdit=false;applyCfg(cfg);S.date=todayS();location.hash='today';render();window.scrollTo(0,0)}
 });
+
+/* ---------- weekly review: built in the app from what's been logged, no chat needed ---------- */
+function weekReview(){
+  const end=toS(toN(todayS())-1),from=toS(toN(end)-6),pFrom=toS(toN(from)-7),pEnd=toS(toN(from)-1);
+  const rng=(a,b)=>{const o=[];for(let n=toN(a);n<=toN(b);n++)o.push(toS(n));return o};
+  const W=rng(from,end),PW=rng(pFrom,pEnd),avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,r1=x=>Math.round(x*10)/10;
+  const val=(d,k)=>{const v=+getK(S.days[d]||{},k);return v>0?v:null},list=(ds,k)=>ds.map(d=>val(d,k)).filter(x=>x!=null);
+  const slp=ds=>ds.map(d=>sleepH(getK(S.days[d]||{},'whoop.sleep'))).filter(x=>x>0);
+  // sessions
+  let pl=0,dn=0,keyPl=0,keyDn=0;const missed=[];
+  for(const d of W){if(d<START)continue;const p=plan(d),o=S.days[d]||{};for(const k of ['am','pm']){const x=p[k];if(!x)continue;pl++;const done=!!(o.done&&o.done[k]);if(done)dn++;if(x.tier==='KEY'||x.tier==='HARD'){keyPl++;if(done)keyDn++;else missed.push(DN[dow(d)]+' '+x.title)}}}
+  // recovery, HRV, RHR, sleep
+  const rec=list(W,'whoop.rec'),prec=list(PW,'whoop.rec'),hrv=list(W,'whoop.hrv'),phrv=list(PW,'whoop.hrv'),rhr=list(W,'whoop.rhr'),prhr=list(PW,'whoop.rhr'),sl=slp(W),psl=slp(PW);
+  const reds=rec.filter(x=>x<34).length,short=sl.filter(x=>x<7).length,good=sl.filter(x=>x>=8).length;
+  // weight
+  const wts=W.map(d=>[d,val(d,'weight')]).filter(x=>x[1]),pw=PW.map(d=>val(d,'weight')).filter(Boolean);
+  const wNow=wts.length?avg(wts.map(x=>x[1])):null,wPrev=pw.length?avg(pw):null,wCh=wNow!=null&&wPrev!=null?wNow-wPrev:null;
+  const goal=CFG?CFG.goal:'lose',cutting=goal==='lose'&&toN(end)<toN(D.p3s);
+  // food
+  let mPl=0,mDn=0;for(const d of W){if(d<START)continue;const f=fuel(plan(d)),o=S.days[d]||{};mPl+=f.meals.length;f.meals.forEach((m,i)=>{if(getK(o,'meals.'+i))mDn++})}
+  // check-ins
+  const ci=W.filter(d=>val(d,'whoop.rec')!=null||val(d,'weight')!=null).length;
+  // lap times
+  const gs=(typeof gsess==='function'?gsess():[]).filter(s=>s.date>=from&&s.date<=end&&s.laps),laps=gs.map(s=>{const b=s.laps[s.best];return b?{track:s.track,date:s.date,best:b.time,a:s.aLap,n:s.laps.filter(l=>l.valid).length}:null}).filter(Boolean);
+  const prevBest=t=>{const o=(typeof gsess==='function'?gsess():[]).filter(s=>s.track===t&&s.date<from&&s.laps&&s.laps[s.best]).map(s=>s.laps[s.best].time);return o.length?Math.min(...o):null};
+  const fmtT=t=>{const m=Math.floor(t/60),s=(t-m*60).toFixed(2);return m+':'+(s<10?'0':'')+s};
+  const inj=typeof injNow==='function'?injNow(end):null;
+
+  const shows=[],probs=[],next=[];
+  if(pl)shows.push('Sessions: '+dn+' of '+pl+' done ('+Math.round(dn/pl*100)+'%). Hard and key sessions: '+keyDn+' of '+keyPl+'.');
+  if(rec.length)shows.push('Recovery: average '+Math.round(avg(rec))+'%'+(prec.length?' ('+(avg(rec)>=avg(prec)?'up':'down')+' from '+Math.round(avg(prec))+'%)':'')+', '+reds+' red day'+(reds===1?'':'s')+'.');
+  if(hrv.length)shows.push('HRV: '+Math.round(avg(hrv))+' ms'+(phrv.length?' (last week '+Math.round(avg(phrv))+')':'')+'. Resting HR: '+(rhr.length?Math.round(avg(rhr))+' bpm'+(prhr.length?' (last week '+Math.round(avg(prhr))+')':''):'not logged')+'.');
+  if(sl.length)shows.push('Sleep: average '+fmtH(avg(sl))+(psl.length?' (last week '+fmtH(avg(psl))+')':'')+'. '+good+' night'+(good===1?'':'s')+' over 8 h, '+short+' under 7 h.');
+  if(wNow!=null)shows.push('Weight: '+r1(wNow)+' kg average'+(wCh!=null?' ('+(wCh>0?'+':'')+r1(wCh)+' kg on last week)':'')+'.');
+  if(mPl)shows.push('Food: '+mDn+' of '+mPl+' meals ticked off ('+Math.round(mDn/mPl*100)+'%).');
+  laps.forEach(l=>{const pb=prevBest(l.track);shows.push('Lap times, '+l.track+' '+nice(l.date)+': best '+fmtT(l.best)+(l.a?', A lap '+fmtT(l.a):'')+' over '+l.n+' laps'+(pb?' ('+(l.best<pb?fmtT(pb-l.best).replace(/^0:/,'')+' s quicker than':(l.best-pb).toFixed(2)+' s off')+' your previous best there)':'')+'.')});
+  if(inj)shows.push('Injury: '+injLabel(inj).toLowerCase()+', stage '+(inj.stage||1)+' ('+injStageName(inj)+').');
+
+  // problems, worst first
+  if(ci<4){probs.push([9,'Only '+ci+' morning check-in'+(ci===1?'':'s')+' this week. Without them the app can\'t adjust your training to how recovered you are.']);next.push('Do the morning check-in every day: it takes 30 seconds.')}
+  if(pl&&dn/pl<0.7){probs.push([8,'You missed '+(pl-dn)+' of '+pl+' sessions'+(missed.length?', including '+missed.slice(0,3).join(', '):'')+'. Fitness is built on the weeks you complete, not the sessions you plan.']);next.push(missed.length?'Protect the key sessions first: if a day goes wrong, move the key session, don\'t drop it.':'Plan the week around work now: put every session in your calendar.')}
+  else if(keyPl&&keyDn<keyPl){probs.push([6,'Missed hard sessions: '+missed.slice(0,3).join(', ')+'.']);next.push('Hit every hard and key session next week, even if the easy ones get cut short.')}
+  if(reds>=2){probs.push([7,reds+' red recovery days. Your body is not absorbing the training.']);next.push('Bed 30–45 minutes earlier and keep easy days truly easy until recovery is back above 50%.')}
+  if(hrv.length>=3&&phrv.length>=3&&avg(hrv)<avg(phrv)*0.9){probs.push([6,'HRV is down '+Math.round((1-avg(hrv)/avg(phrv))*100)+'% on last week. That usually means fatigue, stress, poor sleep or illness building.']);next.push('Take the amber call seriously next week: cut sets by a third on low-recovery days.')}
+  if(rhr.length>=3&&prhr.length>=3&&avg(rhr)>avg(prhr)+3){probs.push([5,'Resting HR is up '+Math.round(avg(rhr)-avg(prhr))+' bpm on last week. Watch for illness or overreaching.']);}
+  if(sl.length&&avg(sl)<7.5){probs.push([7,'Average sleep '+fmtH(avg(sl))+'. Below 8 hours you recover slower and make worse decisions on the bike.']);next.push('Set a fixed lights-out time that gets you 8 hours before your alarm.')}
+  if(wCh!=null&&cutting&&wCh<-0.5){probs.push([7,'Weight is dropping too fast ('+r1(wCh)+' kg in a week). Losing more than 0.5 kg a week costs muscle and strength.']);next.push('Add 200 kcal a day: an extra bagel or a bigger evening meal.')}
+  if(wCh!=null&&cutting&&wCh>0.2){probs.push([5,'Weight went up '+r1(wCh)+' kg while you\'re meant to be getting leaner.']);next.push('Tick off every meal so you can see where the extra is coming from, and skip anything not on the plan.')}
+  if(wCh!=null&&goal==='build'&&wCh<0){probs.push([5,'Weight went down while you\'re trying to build muscle.']);next.push('Eat every meal on the plan, including the extras: you\'re not eating enough.')}
+  if(mPl&&mDn/mPl<0.6){probs.push([6,'Only '+Math.round(mDn/mPl*100)+'% of meals ticked off. If it\'s not logged, the plan can\'t tell whether the food is the problem.']);next.push('Tick off meals as you eat them, not at the end of the day.')}
+  if(!probs.length){probs.push([1,'Nothing major. Sessions, recovery and food all look on track.']);next.push('Keep doing exactly this. Push the key sessions a little harder if recovery stays green.')}
+  probs.sort((a,b)=>b[0]-a[0]);
+  const title='Week review · '+nice(from)+' to '+nice(end);
+  const text='WHAT THE DATA SHOWS\n'+(shows.length?shows.map(x=>'• '+x).join('\n'):'• Not enough logged this week to say much.')
+    +'\n\nBIGGEST PROBLEMS\n'+probs.slice(0,3).map((x,i)=>(i+1)+'. '+x[1]).join('\n')
+    +'\n\nNEXT WEEK\n'+[...new Set(next)].slice(0,3).map(x=>'• '+x).join('\n');
+  return {title,text,date:todayS(),by:'app',from,end}}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#revGo');if(!t)return;
+  const r=weekReview(),id='w-'+r.end;S.reviews[id]=r;save('reviews/'+id,true);S.revMsg='Done. Your review is at the top.';render();window.scrollTo(0,0)});
 /* ---------- meal prep ---------- */
 const PREP=[
  {id:'teri',name:'Chicken teriyaki rice box',kcal:710,p:48,c:85,f:17,keeps:'rice',
@@ -1350,7 +1610,7 @@ function timeline(){
 }
 
 /* ---------- top ---------- */
-const NAVI={today:'<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',week:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',food:'<path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5a2 2 0 0 0 2 2M9 3v5M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/>',track:'<path d="M5 21V4m0 0h11l-2 4 2 4H5"/>',stats:'<path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/>'};
+const NAVI={today:'<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',week:'<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',food:'<path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5a2 2 0 0 0 2 2M9 3v5M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/>',track:'<path d="M5 21V4"/><rect x="5" y="4" width="14" height="9"/><path fill="currentColor" stroke="none" d="M5 4h3.5v3h-3.5zM12 4h3.5v3h-3.5zM8.5 7h3.5v3h-3.5zM15.5 7h3.5v3h-3.5zM5 10h3.5v3h-3.5zM12 10h3.5v3h-3.5z"/>',stats:'<path d="M4 20V10m6 10V4m6 16v-7m4 7H3"/>'};
 const navIc=k=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAVI[k]+'</svg>';
 
 const avInner=()=>{const p=S.prof||{};return p.photo&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(p.photo)?'<img src="'+p.photo+'" alt="">':esc(((p.name||(p.legacy?'Kayden':'R')).trim()||'R')[0].toUpperCase())};
@@ -1410,7 +1670,7 @@ function trackItem(p,s){
 function renderToday(){
   const s=S.date,p=plan(s),doc='days/'+s,d=docObj(doc),prev=S.days[toS(toN(s)-1)],v=verdict(d,prev);
   const w=d.whoop||{},rec=+w.rec,sl=sleepH(w.sleep),st=+w.strain,L=dayLoad(p);
-  const dials='<div class="dials">'+ring(rec,100,COL[v[0]],'RECOVERY',rec>0?rec+'%':'—',rec>0?'':'tap to log','#log')+ring(sl,8,'var(--sleep)','SLEEP',sl>0?fmtH(sl):'—',sl>0?'of 8 h':'tap to log','#log')+ring(st>0?st:L.a/12*21,21,'var(--blue)','STRAIN',st>0?st.toFixed(1):(L.k?'Key':L.a>=4?'High':L.a>=2?'Med':'Low'),st>0?'logged':'planned','#log')+'</div>';
+  const dials='<div class="dials">'+ring(rec,100,COL[v[0]],recLabel(),rec>0?rec+'%':'—',rec>0?'':'tap to log','#log')+ring(sl,8,'var(--sleep)','SLEEP',sl>0?fmtH(sl):'—',sl>0?'of 8 h':'tap to log','#log')+strainRing(d,L)+'</div>';
   const call='<div class="call '+v[0]+'"><i></i><span>'+esc(v[1])+'</span></div>';
   let list='';
   if(!p.am&&!p.pm&&!p.track)list='<div class="card"><h3>Rest day</h3><p class="mut" style="margin:4px 0 0">'+esc(p.title)+'. Walk, stretch, eat well and sleep.</p></div>';
@@ -1420,7 +1680,7 @@ function renderToday(){
   if(p.track)list+=trackItem(p,s);
   const f=fuel2(p,s);const eaten=f.meals.reduce((a,m,i)=>a+(getK(d,'meals.'+i)?m[2]:0),0);
   const fuelC='<div class="card"><span class="lab">FUEL · '+esc({gym:'TRAINING DAY',rec:'RECOVERY DAY',track:'TRACK DAY',race:'RACE DAY'}[p.type])+(f.cut?' · LEAN-DOWN':'')+'</span><div style="display:flex;justify-content:space-between;align-items:end;gap:10px"><div><span class="kc">'+eaten+'</span><span class="mut"> / '+f.kcal+' kcal</span></div><a href="#food" class="mut">Meal prep ›</a></div><div class="bars">'+[['Protein',f.p,'g','var(--go)',+d.protein],['Carbs',f.c,'g','var(--blue)',null],['Fat',f.f,'g','var(--amb)',null],['Water',f.water,'L','var(--sleep)',+d.water]].map(b=>'<div class="br"><span>'+b[0]+'</span><div class="t"><span style="width:'+(b[4]>0?Math.min(100,b[4]/b[1]*100):0)+'%;background:'+b[3]+'"></span></div><span class="mut">'+(b[4]>0?b[4]+' / ':'')+b[1]+' '+b[2]+'</span></div>').join('')+'</div>'+f.meals.map((m,i)=>'<div class="chk">'+chk(doc,'meals.'+i,m[1])+'<span><b>'+esc(m[0])+'</b> '+esc(m[1])+'</span><small>'+(m[2]?m[2]+' kcal':'')+'</small></div>').join('')+'<div class="fields" style="margin-top:10px">'+fld(doc,'water','Water (L)')+fld(doc,'protein','Protein eaten (g)')+'</div><div class="chk">'+chk(doc,'supp.creatine','Creatine')+'<span>Creatine 5 g</span><small></small></div>'+(['10','11','12','01','02','03'].includes(s.slice(5,7))?'<div class="chk">'+chk(doc,'supp.vitd','Vitamin D')+'<span>Vitamin D 10 micrograms</span><small></small></div>':'')+'</div>';
-  const logC='<details class="item" id="log"'+(rec>0?'':' open')+'><summary><span class="tm">AM</span><span class="it"><b>Morning check-in</b><span>Whoop numbers and weight</span></span>'+(rec>0?'<span class="pill done">Logged</span>':'<span class="pill">To do</span>')+'</summary><div class="body"><div class="fields" style="margin-top:12px">'+[['rec','Recovery %'],['hrv','HRV (ms)'],['rhr','Resting HR'],['sleep','Sleep (e.g. 7:50)'],['sleepPerf','Sleep perf. %'],['strain','Strain (yesterday)']].map(x=>fld(doc,'whoop.'+x[0],x[1])).join('')+fld(doc,'weight','Weight (kg)')+(dow(s)===1?fld(doc,'waist','Waist (cm), Mondays'):'')+'</div></div></details>';
+  const logC='<details class="item" id="log"'+(rec>0?'':' open')+'><summary><span class="tm">AM</span><span class="it"><b>Morning check-in</b><span>'+(hasWhoop()?'Whoop numbers and weight':'How you feel, sleep, weight')+'</span></span>'+(rec>0?'<span class="pill done">Logged</span>':'<span class="pill">To do</span>')+'</summary><div class="body">'+(checkinFields(doc,s)||'<div class="fields" style="margin-top:12px">'+[['rec','Recovery %'],['hrv','HRV (ms)'],['rhr','Resting HR'],['sleep','Sleep (e.g. 7:50)'],['sleepPerf','Sleep perf. %'],['strain','Strain (yesterday)']].map(x=>fld(doc,'whoop.'+x[0],x[1])).join('')+fld(doc,'weight','Weight (kg)')+(dow(s)===1?fld(doc,'waist','Waist (cm), Mondays'):'')+'</div>')+'</div></details>';
   const notes='<div class="card"><span class="lab">NOTES</span><textarea data-doc="'+esc(doc)+'" data-k="notes" id="notes" rows="3" aria-label="Notes" placeholder="How did today feel? Pain, arm pump, wins?">'+esc(d.notes||'')+'</textarea></div>';
   return dials+'<div class="grid"><div>'+call+logC+list+notes+'<p class="mut">Classic layout. <a href="#today" id="lay">Switch to Focus</a></p></div><div>'+fuelC+'</div></div>';
 }
@@ -1494,8 +1754,8 @@ function renderStats(){
     const hv=days.filter(d=>+getK(S.days[d],'whoop.hrv')>0).slice(-42).map(d=>[toN(d),+S.days[d].whoop.hrv]);
     body='<div class="grid"><div><div class="card"><span class="lab">BODYWEIGHT · AIM DOWN 0.2–0.4 KG A WEEK UNTIL 24 JAN</span>'+lineChart('c1',wt,'kg')+'</div><div class="card"><span class="lab">WAIST · MONDAY MORNINGS</span>'+lineChart('c5',days.filter(d=>+S.days[d].waist>0).map(d=>[toN(d),+S.days[d].waist]),'cm')+'</div><div class="card"><span class="lab">RECOVERY · LAST 6 WEEKS</span><div class="fig" id="c2" data-c="#2ad67a" data-pts="'+esc(JSON.stringify(rc))+'" data-u="%"><svg></svg></div></div><div class="card"><span class="lab">HRV · LAST 6 WEEKS</span><div class="fig" id="c3" data-c="#93acd0" data-pts="'+esc(JSON.stringify(hv))+'" data-u="ms"><svg></svg></div></div></div><div><div class="card"><span class="lab">BENCHMARKS · RETEST JAN, JUN, OCT</span><div class="scroll"><table><thead><tr><th>Test</th><th>Wk 1</th><th>Jan</th><th>Jun</th><th>Oct</th></tr></thead><tbody>'+BM.map(b=>'<tr><td>'+esc(b[1])+'<div class="mut" style="font-size:12px">'+esc(b[2])+'</div></td>'+['wk1','jan','jun','oct'].map(p=>'<td>'+inp('profile/main','bench.'+b[0]+'.'+p,{lab:b[1]+' '+p})+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></div></div></div>'}
   else if(sub==='coach'){const rv=Object.entries(S.reviews).filter(([k,r])=>r&&r.text).sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date)));
-    body='<div class="grid"><div><div class="card"><span class="lab">COACH REVIEWS</span>'+(rv.length?rv.map(([k,r])=>'<div class="ex"><div class="exh"><b>'+esc(r.title||'Review')+'</b><span class="mut">'+esc(r.date||'')+'</span></div><div class="note">'+esc(r.text)+'</div></div>').join(''):'<p class="empty">No reviews yet. Log a week, then ask for one.</p>')+'</div></div><div><div class="card"><span class="lab">GET A REVIEW</span><p style="margin-top:0">Message Claude: <b>"Review my last week"</b>. Claude reads everything logged here and writes the review into this tab.</p>'+(S.sample?'<button id="ask">Quick review: last 14 days</button>':'')+'<p id="askmsg" class="mut"></p></div></div></div>'}
-  else body=profCard()+whoopCard()+'<div class="card" style="max-width:760px"><span class="lab">LAYOUT</span><p style="margin:0 0 8px">'+(isFocus()?'<b>Focus</b> (recommended): up-next card, gym mode with rest timer, one-tap logging, sessions that adjust to your Whoop recovery.':'<b>Classic</b>: every session open on one page, everything logged by hand, no automatic changes.')+'</p><button id="lay">'+(isFocus()?'Switch to Classic layout':'Switch to Focus layout')+'</button></div>'+(!S.canInstall&&window.MXSB?'<div class="card" style="max-width:760px"><span class="lab">THIS APP</span><p style="margin:0 0 8px"><b>iPhone:</b> open it in Safari, tap Share, then Add to Home Screen. <b>Mac:</b> in Safari choose File, then Add to Dock. In Chrome use the install icon in the address bar. You get the orange icon and it opens full screen.</p><div class="row2" style="flex-wrap:wrap"><button id="mxupd">'+(S.updReady?'Update now':'Check for updates')+'</button><button class="ghost" id="signout">Sign out</button></div><p class="mut" style="font-size:12px;margin:8px 0 0">Version '+esc(mxVer())+(S.updMsg?' · '+esc(S.updMsg):'')+'</p></div>':'')+(S.canInstall?'<div class="card" style="max-width:760px"><span class="lab">DESKTOP APP</span><p style="margin:0 0 8px">Install this as an app on your Mac, with its own window and icon.</p><button id="install">Install on desktop</button></div>':'')+'<div class="card" style="max-width:760px"><span class="lab">TRAINING NUMBERS</span><p class="mut" style="margin-top:0">These set every weight and heart-rate target in the plan.</p><div class="fields">'+fld('profile/main','maxHR','Max heart rate (bpm)',{ph:'200'})+fld('profile/main','tests.ohp','Overhead press, best 5 (kg)')+fld('profile/main','tests.bench','DB bench, best 8, per hand (kg)')+'</div><p class="mut">Max HR: the highest number Polar or Whoop has recorded in a hard session. Until you set it, the plan uses 200. Do a hard set of 5 overhead press and 8 dumbbell bench in your first Strength D to fill the last two. Squat and trap-bar weights come from your week 1 benchmarks.</p></div>';
+    body='<div class="grid"><div><div class="card"><span class="lab">COACH REVIEWS</span>'+(rv.length?rv.map(([k,r])=>'<div class="ex"><div class="exh"><b>'+esc(r.title||'Review')+'</b><span class="mut">'+esc(r.date||'')+'</span></div><div class="note" style="white-space:pre-line">'+esc(r.text)+'</div></div>').join(''):'<p class="empty">No reviews yet. Log a week, then tap Review my last week.</p>')+'</div></div><div><div class="card"><span class="lab">GET A REVIEW</span><p style="margin-top:0">Looks at your last 7 days: sessions done, recovery, HRV, sleep, weight, food and lap times. You get what the data shows, your 3 biggest problems and what to change next week.</p><button id="revGo">Review my last week</button>'+(S.revMsg?'<p class="mut" style="margin:8px 0 0">'+esc(S.revMsg)+'</p>':'')+'<p class="mut" style="font-size:12px;margin:8px 0 0">The more you log, the sharper it gets.</p></div></div></div>'}
+  else body=profCard()+injCard()+(hasWhoop()?whoopCard():'')+'<div class="card" style="max-width:760px"><span class="lab">LAYOUT</span><p style="margin:0 0 8px">'+(isFocus()?'<b>Focus</b> (recommended): up-next card, gym mode with rest timer, one-tap logging, sessions that adjust to your Whoop recovery.':'<b>Classic</b>: every session open on one page, everything logged by hand, no automatic changes.')+'</p><button id="lay">'+(isFocus()?'Switch to Classic layout':'Switch to Focus layout')+'</button></div>'+(!S.canInstall&&window.MXSB?'<div class="card" style="max-width:760px"><span class="lab">THIS APP</span><p style="margin:0 0 8px"><b>iPhone:</b> open it in Safari, tap Share, then Add to Home Screen. <b>Mac:</b> in Safari choose File, then Add to Dock. In Chrome use the install icon in the address bar. You get the orange icon and it opens full screen.</p><div class="row2" style="flex-wrap:wrap"><button id="mxupd">'+(S.updReady?'Update now':'Check for updates')+'</button><button class="ghost" id="signout">Sign out</button></div><p class="mut" style="font-size:12px;margin:8px 0 0">Version '+esc(mxVer())+(S.updMsg?' · '+esc(S.updMsg):'')+'</p></div>':'')+(S.canInstall?'<div class="card" style="max-width:760px"><span class="lab">DESKTOP APP</span><p style="margin:0 0 8px">Install this as an app on your Mac, with its own window and icon.</p><button id="install">Install on desktop</button></div>':'')+'<div class="card" style="max-width:760px"><span class="lab">TRAINING NUMBERS</span><p class="mut" style="margin-top:0">These set every weight and heart-rate target in the plan.</p><div class="fields">'+fld('profile/main','maxHR','Max heart rate (bpm)',{ph:'200'})+fld('profile/main','tests.ohp','Overhead press, best 5 (kg)')+fld('profile/main','tests.bench','DB bench, best 8, per hand (kg)')+'</div><p class="mut">Max HR: the highest number Polar or Whoop has recorded in a hard session. Until you set it, the plan uses 200. Do a hard set of 5 overhead press and 8 dumbbell bench in your first Strength D to fill the last two. Squat and trap-bar weights come from your week 1 benchmarks.</p></div>';
   return '<div class="seg">'+[['progress','Progress'],['coach','Coach'],['profile','Profile']].map(x=>'<a href="#stats" data-ss="'+x[0]+'" class="'+(sub===x[0]?'on':'')+'">'+x[1]+'</a>').join('')+'</div>'+body;
 }
 const BM=[['squat','Back squat, best set of 3 (kg)','+10% by Jan'],['trap','Trap-bar deadlift, best set of 3 (kg)','+10% by Jan'],['chin','Chin-ups in 10 min','Pro benchmark: 50'],['hang','Dead hang (s)','Higher is better'],['calf','Calf raises, weaker leg','Pro benchmark: 25'],['plank','Side plank, weaker side (s)','+50% by Jan'],['hlr','Hanging leg raises (reps)','+50% by Jan'],['row','2 km row (s)','Lower is better'],['hrdrop','HR drop 60 s after row (bpm)','+10 bpm by Jan'],['rhr','Resting HR, 7-day avg','Lower is better'],['bw','Bodyweight, weekly avg (kg)','Down 0.2–0.4 kg a week until '+nice(addD(D.p3s,-1)).slice(4)],['waist','Waist at belly button (cm)','Down 2–4 cm by late Jan'],['hotlap','Best hot lap, same track (s)','2 s faster by Round 1'],['sector','Corner sector best (s)','Lower is better'],['motobest','30 + 2 moto: best lap (s)','Lower is better'],['motogap','30 + 2 moto: last-2-laps gap (s)','Under 2 s']];
@@ -1580,7 +1840,7 @@ woTick=setInterval(tick,500);
 function renderTodayFocus(){
   const s=S.date,raw=plan(s),{p,adj}=adjusted(raw,s),doc='days/'+s,d=docObj(doc),prev=S.days[toS(toN(s)-1)],v=verdict(d,prev);
   const w=d.whoop||{},rec=+w.rec,sl=sleepH(w.sleep),st=+w.strain,L=dayLoad(p),dn=d.done||{};
-  const dials='<div class="dials">'+ring(rec,100,COL[v[0]],'RECOVERY',rec>0?rec+'%':'—',rec>0?'':'tap to log','#log')+ring(sl,8,'var(--sleep)','SLEEP',sl>0?fmtH(sl):'—',sl>0?'of 8 h':'tap to log','#log')+ring(st>0?st:L.a/12*21,21,'var(--blue)','STRAIN',st>0?st.toFixed(1):(L.k?'Key':L.a>=4?'High':L.a>=2?'Med':'Low'),st>0?'logged':'planned','#log')+'</div>';
+  const dials='<div class="dials">'+ring(rec,100,COL[v[0]],recLabel(),rec>0?rec+'%':'—',rec>0?'':'tap to log','#log')+ring(sl,8,'var(--sleep)','SLEEP',sl>0?fmtH(sl):'—',sl>0?'of 8 h':'tap to log','#log')+strainRing(d,L)+'</div>';
   const call='<div class="call '+v[0]+'"><i></i><span>'+esc(adj||v[1])+(adj?' <a href="#today" id="orig" class="mut" style="font-weight:500">Show original plan</a>':(S.orig?' <a href="#today" id="orig" class="mut" style="font-weight:500">Back to adjusted plan</a>':''))+'</span></div>';
   const f=fuel2(p,s),li=f.meals.findIndex(m=>m[0]==='13:00');
   const hr=new Date().getHours(),isT=s===todayS();
@@ -1599,7 +1859,7 @@ function renderTodayFocus(){
   if(p.track)items+=trackItem(p,s);
   const eaten=f.meals.reduce((a,m,i)=>a+(getK(d,'meals.'+i)?m[2]:0),0);
   const fuelC='<div class="card"><span class="lab">FUEL · '+(f.cut?'LEAN-DOWN PHASE UNTIL '+nice(addD(D.p3s,-1)).slice(4).toUpperCase():'FUEL FOR PERFORMANCE')+'</span><div style="display:flex;justify-content:space-between;align-items:end;gap:10px"><div><span class="kc">'+eaten+'</span><span class="mut"> / '+f.kcal+' kcal</span></div><a href="#food" class="mut">Meal prep ›</a></div><div class="bars">'+[['Protein',f.p,'g','var(--go)',+d.protein],['Water',f.water,'L','var(--sleep)',+d.water]].map(b=>'<div class="br"><span>'+b[0]+'</span><div class="t"><span style="width:'+(b[4]>0?Math.min(100,b[4]/b[1]*100):0)+'%;background:'+b[3]+'"></span></div><span class="mut">'+(b[4]>0?b[4]+' / ':'')+b[1]+' '+b[2]+'</span></div>').join('')+'</div>'+f.meals.map((m,i)=>'<div class="chk">'+chk(doc,'meals.'+i,m[1])+'<span><b>'+esc(m[0])+'</b> '+esc(m[1])+'</span><small>'+(m[2]?m[2]+' kcal':'')+'</small></div>').join('')+'<div class="fields" style="margin-top:10px">'+fld(doc,'protein','Protein eaten (g)')+fld(doc,'water','Water (L)')+'</div><div class="chk">'+chk(doc,'supp.creatine','Creatine')+'<span>Creatine 5 g</span><small></small></div>'+(['10','11','12','01','02','03'].includes(s.slice(5,7))?'<div class="chk">'+chk(doc,'supp.vitd','Vitamin D')+'<span>Vitamin D 10 micrograms</span><small></small></div>':'')+'</div>';
-  const logC='<details class="item" id="log"'+(rec>0?'':' open')+'><summary><span class="tm">AM</span><span class="it"><b>Morning check-in</b><span>30 seconds: recovery, sleep, weight</span></span>'+(rec>0?'<span class="pill done">Logged</span>':'<span class="pill">To do</span>')+'</summary><div class="body"><div class="fields" style="margin-top:12px">'+fld(doc,'whoop.rec','Recovery %')+fld(doc,'whoop.sleep','Sleep (e.g. 7:50)')+fld(doc,'weight','Weight (kg)')+(dow(s)===1?fld(doc,'waist','Waist (cm), Mondays'):'')+'</div><details style="margin-top:8px"><summary class="mut" style="cursor:pointer">More Whoop numbers</summary><div class="fields" style="margin-top:8px">'+[['hrv','HRV (ms)'],['rhr','Resting HR'],['sleepPerf','Sleep perf. %'],['strain','Strain (yesterday)']].map(x=>fld(doc,'whoop.'+x[0],x[1])).join('')+'</div></details></div></details>';
+  const logC='<details class="item" id="log"'+(rec>0?'':' open')+'><summary><span class="tm">AM</span><span class="it"><b>Morning check-in</b><span>30 seconds: '+(hasWhoop()?'recovery':'how you feel')+', sleep, weight</span></span>'+(rec>0?'<span class="pill done">Logged</span>':'<span class="pill">To do</span>')+'</summary><div class="body">'+(checkinFields(doc,s)||'<div class="fields" style="margin-top:12px">'+fld(doc,'whoop.rec','Recovery %')+fld(doc,'whoop.sleep','Sleep (e.g. 7:50)')+fld(doc,'weight','Weight (kg)')+(dow(s)===1?fld(doc,'waist','Waist (cm), Mondays'):'')+'</div><details style="margin-top:8px"><summary class="mut" style="cursor:pointer">More Whoop numbers</summary><div class="fields" style="margin-top:8px">'+[['hrv','HRV (ms)'],['rhr','Resting HR'],['sleepPerf','Sleep perf. %'],['strain','Strain (yesterday)']].map(x=>fld(doc,'whoop.'+x[0],x[1])).join('')+'</div></details>')+'</div></details>';
   const notes='<div class="card"><span class="lab">NOTES</span><textarea data-doc="'+esc(doc)+'" data-k="notes" id="notes" rows="3" aria-label="Notes" placeholder="Pain, arm pump, wins?">'+esc(d.notes||'')+'</textarea></div>';
   const rc='<div class="card rcard"><div style="display:flex;justify-content:space-between"><span class="lab">READINESS</span><a href="#log" class="lab" style="text-decoration:none">'+(rec>0?'Edit':'Log now ›')+'</a></div>'+dials+call+'</div>';
   return '<div class="grid"><div>'+nowC+rc+'<div class="mob">'+list+'</div>'+logC+items+notes+'<p class="mut">Focus layout. <a href="#today" id="lay">Switch to Classic</a></p></div><div><div class="desk">'+list+'</div>'+fuelC+'</div></div>';
@@ -1616,7 +1876,7 @@ function render(){
   const openIds=[...document.querySelectorAll('details.item[open]')].map(d=>d.id),closedIds=[...document.querySelectorAll('details.item:not([open])')].map(d=>d.id);
   renderBoard();
   const v=S.view;const body=v==='today'&&S.wo?renderWorkout():v==='week'?renderWeek():v==='food'?renderFood():v==='track'?renderTrackView():v==='stats'?renderStats():(isFocus()?renderTodayFocus():renderToday());
-  $('#app').innerHTML='<div id="msg" class="banner" style="display:none"></div>'+body;
+  $('#app').innerHTML='<div id="msg" class="banner" style="display:none"></div>'+(v==='today'&&!S.wo?injBanner():'')+body;
   if(S.keepOpen){openIds.forEach(id=>{const d=document.getElementById(id);if(d)d.open=true});closedIds.forEach(id=>{const d=document.getElementById(id);if(d)d.open=false})}
   S.keepOpen=true;renderMsg();drawCharts();
 }
@@ -1629,7 +1889,7 @@ document.addEventListener('change',e=>{const t=e.target;
   if(t.type!=='checkbox'&&!isText){if(t.dataset.t)v=parseT(v);else if(v!==''&&isFinite(+v))v=+v}
   if(k==='whoop.sleep'&&v!==''&&v!=null){const h=sleepH(v);if(isFinite(h))v=h}
   if(t.type==='checkbox'&&!v)v=null;
-  setK(docObj(t.dataset.doc),k,v);save(t.dataset.doc);
+  setK(docObj(t.dataset.doc),k,v);if(/^whoop\.(sleep|rhr)$/.test(k)&&!hasWhoop())readyCalc(t.dataset.doc);save(t.dataset.doc);
   setTimeout(render,0);
 });
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(S.dirty&&!(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('#app input:not([type=checkbox]),#app textarea')))render()},50)});

@@ -15,7 +15,7 @@ function renderTiming(){
     +'<label class="filebtn" for="gfile">'+(S.gbusy?'Analysing…':'Choose GPS file')+'</label><input id="gfile" class="vh" type="file" accept=".gpx,.tcx,.fit,.csv,.txt">'
     +(S.gerr?'<p style="color:var(--red);font-weight:600">'+esc(S.gerr)+'</p>':'')+'</div>';
   const how='<div class="card"><span class="lab">GETTING THE FILE</span><ul class="steps"><li><b>Polar watch:</b> easiest is Connect Polar above. Or on flow.polar.com open the session and export it as TCX or GPX. Record in a sport profile with GPS on its highest accuracy setting.</li><li><b>GPS on the bike</b> (RaceBox, AiM, VBOX, phone app): export CSV, GPX or FIT.</li><li><b>Accuracy:</b> watch GPS (1 sample a second) gives lap and sector times to about ±0.2 s. Corner speeds and braking points need 10 Hz or more from a unit mounted on the bike.</li></ul></div>';
-  return '<div class="grid"><div>'+polarCard()+imp+how+'</div><div>'+gSessList(gsess(),'GPS SESSIONS')+'</div></div>';
+  return '<div class="grid"><div>'+polarCard()+imp+'</div><div>'+gSessList(gsess(),'GPS SESSIONS')+how+'</div></div>';
 }
 function gChart(d,sel,cmp){const best=cmp||d.laps[d.best],a=best.v5||[];if(a.length<3)return '';const b=sel!==best&&sel.v5?sel.v5:null,W=640,H=210,pl=40,pb=24,n=a.length,mx=Math.max(...a,...(b||[]))*1.08;
   const X=i=>pl+(W-pl-8)*i/(n-1),Y=v=>(H-pb)-(H-pb-8)*v/mx,path=arr=>arr.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');

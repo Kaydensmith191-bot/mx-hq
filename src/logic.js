@@ -216,7 +216,7 @@ const EQ={bike:['Wattbike or spin bike','85–95 rpm, seated'],air:['Air bike (A
 const equip=(k,w)=>isBW()?(k==='circ'?'bwcirc':k==='long'?'road':'bwbike'):({z2:w===3?'tread':'bike',ap:'air',thr:'row',sim:'air',sim3:'air',short:'air',circ:'mixed',long:'road',recov:'bike'}[k]||null);
 function plan(s){let r=plan0(s);const w=dow(s);if(isBW()&&r.title)r={...r,title:r.title.replace(/Strength/g,'Bodyweight').replace(/heavy /g,'sharp ').replace(/Zone 2 \+/,'Zone 2 ride +')};
   if(CFG&&+CFG.daily===1&&w<=4&&r.am&&r.pm&&r.c.mode!=='test'){r=(w===2||w===4)?{...r,am:null,pm:r.am,title:r.am.title||r.title}:{...r,am:null}}
-  for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};return r}
+  for(const k of ['am','pm'])if(r[k]&&r[k].kind&&!r[k].eq)r[k]={...r[k],eq:equip(r[k].kind,w)};if(typeof injDay==='function')r=injDay(r,s);return r}
 function plan0(s){
   const c=ctx(s),w=c.w,m=c.mode,wk=c.wk;
   const P=(o)=>({c,am:null,pm:null,track:null,type:'gym',...o});
@@ -320,7 +320,7 @@ function lastFor(id,before){
   return null;
 }
 function verdict(day,prevDay){
-  const r=+getK(day,'whoop.rec');if(!(r>0))return ['n','Log your Whoop recovery to get today\'s call.'];
+  const r=+getK(day,'whoop.rec');if(!(r>0))return ['n','Do your morning check-in to get today\'s call.'];
   const pr=+getK(prevDay||{},'whoop.rec');
   if(r<34&&pr>0&&pr<34)return ['r','Red two days running: take today off, eat 300 kcal more and get an extra hour of sleep.'];
   if(r<34)return ['r','Red ('+r+'%): swap the hard session for Zone 2 or mobility.'];
